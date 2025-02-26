@@ -1,4 +1,5 @@
-﻿using DPCV_API.Models.ActivityModel;
+﻿using System.Security.Claims;
+using DPCV_API.Models.ActivityModel;
 
 namespace DPCV_API.BAL.Services.Website.Activities
 {
@@ -6,8 +7,8 @@ namespace DPCV_API.BAL.Services.Website.Activities
     {
         Task<List<ActivityDTO>> GetAllActivitiesAsync();
         Task<ActivityDTO?> GetActivityByIdAsync(int activityId);
-        Task<bool> CreateActivityAsync(ActivityDTO activity);
-        Task<bool> UpdateActivityAsync(int activityId, ActivityDTO activity);
-        Task<bool> DeleteActivityAsync(int activityId);
+        Task<bool> CreateActivityAsync(ActivityDTO activity, ClaimsPrincipal user);
+        Task<bool> UpdateActivityAsync(int activityId, ActivityDTO activity, ClaimsPrincipal user);
+        Task<bool> DeleteActivityAsync(int activityId, ClaimsPrincipal user);
     }
 }

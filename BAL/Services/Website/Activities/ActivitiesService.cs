@@ -1,7 +1,7 @@
-﻿using DPCV_API.BAL.Services.Website.Activities;
-using DPCV_API.Configuration.DbContext;
+﻿using DPCV_API.Configuration.DbContext;
 using DPCV_API.Models.ActivityModel;
 using System.Data;
+using System.Security.Claims;
 
 namespace DPCV_API.BAL.Services.Website.Activities
 {
@@ -62,11 +62,25 @@ namespace DPCV_API.BAL.Services.Website.Activities
             };
         }
 
-        // ✅ Create Activity
-        public async Task<bool> CreateActivityAsync(ActivityDTO activity)
+        // ✅ Create Activity with Role-Based Validation
+        public async Task<bool> CreateActivityAsync(ActivityDTO activity, ClaimsPrincipal user)
         {
             try
             {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                if (roleId == 0 || (roleId == 2 && committeeId != activity.CommitteeId))
+                {
+                    _logger.LogWarning("Unauthorized attempt to create an activity.");
+                    return false;
+                }
+
+                int verificationStatus = (roleId == 1) ? 2 : 1;
+
                 string procedureName = "CreateActivity";
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_activity_name", activity.ActivityName);
@@ -74,7 +88,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 _dataManager.AddParameter("@p_committee_id", activity.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId.HasValue ? activity.HomestayId.Value : DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
-                _dataManager.AddParameter("@p_verification_status_id", activity.VerificationStatusId.HasValue ? activity.VerificationStatusId.Value : DBNull.Value);
+                _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
                 if (success)
@@ -90,24 +104,42 @@ namespace DPCV_API.BAL.Services.Website.Activities
             }
         }
 
-        // ✅ Update Activity
-        public async Task<bool> UpdateActivityAsync(int activityId, ActivityDTO activity)
+        // ✅ Update Activity with Role-Based Validation
+        public async Task<bool> UpdateActivityAsync(int activityId, ActivityDTO activity, ClaimsPrincipal user)
         {
             try
             {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_activity_id", activityId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetActivityById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0) return false;
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                if (roleId == 2 && existingCommitteeId != committeeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to update activity: {ActivityId}", activityId);
+                    return false;
+                }
+
+                int verificationStatus = (roleId == 1) ? 2 : 1;
+
                 string procedureName = "UpdateActivity";
                 _dataManager.ClearParameters();
-
                 _dataManager.AddParameter("@p_activity_id", activityId);
                 _dataManager.AddParameter("@p_activity_name", string.IsNullOrWhiteSpace(activity.ActivityName) ? DBNull.Value : activity.ActivityName);
                 _dataManager.AddParameter("@p_description", string.IsNullOrWhiteSpace(activity.Description) ? DBNull.Value : activity.Description);
                 _dataManager.AddParameter("@p_committee_id", activity.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId.HasValue ? activity.HomestayId.Value : DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
-                _dataManager.AddParameter("@p_verification_status_id", activity.VerificationStatusId.HasValue ? activity.VerificationStatusId.Value : DBNull.Value);
+                _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
-
                 if (success)
                     _logger.LogInformation("Activity updated successfully: {ActivityId}", activityId);
                 else
@@ -122,16 +154,33 @@ namespace DPCV_API.BAL.Services.Website.Activities
             }
         }
 
-        // ✅ Delete Activity
-        public async Task<bool> DeleteActivityAsync(int activityId)
+        // ✅ Delete Activity with Role-Based Validation
+        public async Task<bool> DeleteActivityAsync(int activityId, ClaimsPrincipal user)
         {
             try
             {
-                string query = "DELETE FROM activities WHERE activity_id = @ActivityId";
-                _dataManager.ClearParameters();
-                _dataManager.AddParameter("@ActivityId", activityId);
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
 
-                bool success = await _dataManager.ExecuteNonQueryAsync(query, CommandType.Text);
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_activity_id", activityId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetActivityById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0) return false;
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                if (roleId == 2 && existingCommitteeId != committeeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to delete activity: {ActivityId}", activityId);
+                    return false;
+                }
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_activity_id", activityId);
+                bool success = await _dataManager.ExecuteNonQueryAsync("DeleteActivity", CommandType.StoredProcedure);
+
                 if (success)
                 {
                     _logger.LogInformation("Activity deleted successfully: {ActivityId}", activityId);
