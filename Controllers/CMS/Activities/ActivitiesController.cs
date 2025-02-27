@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DPCV_API.BAL.Services.Website.Activities;
 using DPCV_API.Models.ActivityModel;
+using DPCV_API.BAL.Services.Website.Events;
 
 namespace DPCV_API.Controllers.Website
 {
@@ -46,17 +47,21 @@ namespace DPCV_API.Controllers.Website
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Invalid request data.", errors = ModelState });
             }
 
             var result = await _activityService.CreateActivityAsync(activity, User);
+
             if (!result)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { message = "You are not authorized to create this activity." });
             }
 
-            return CreatedAtAction(nameof(GetActivityById), new { id = activity.ActivityId }, activity);
+            return Ok(new { message = "Activity created successfully." });
         }
+
+
 
         // ✅ Update Activity with Role Validation
         [HttpPut("{id}")]
@@ -65,17 +70,20 @@ namespace DPCV_API.Controllers.Website
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Invalid request data.", errors = ModelState });
             }
 
             var result = await _activityService.UpdateActivityAsync(id, activity, User);
+
             if (!result)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { message = "You are not authorized to update this activity or no changes were made." });
             }
 
-            return NoContent();
+            return Ok(new { message = "Activity updated successfully." });
         }
+
 
         // ✅ Delete Activity with Role Validation
         [HttpDelete("{id}")]
@@ -83,12 +91,15 @@ namespace DPCV_API.Controllers.Website
         public async Task<IActionResult> DeleteActivity(int id)
         {
             var result = await _activityService.DeleteActivityAsync(id, User);
+
             if (!result)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { message = "You are not authorized to delete this activity or it does not exist." });
             }
 
-            return NoContent();
+            return Ok(new { message = "Activity deleted successfully." });
         }
+
     }
 }

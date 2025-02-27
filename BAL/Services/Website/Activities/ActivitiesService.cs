@@ -19,8 +19,8 @@ namespace DPCV_API.BAL.Services.Website.Activities
         // ✅ Get All Activities
         public async Task<List<ActivityDTO>> GetAllActivitiesAsync()
         {
-            string query = "SELECT * FROM activities";
-            DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+            string procedureName = "GetAllActivities";
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
             List<ActivityDTO> activities = new();
 
             foreach (DataRow row in result.Rows)
@@ -39,14 +39,15 @@ namespace DPCV_API.BAL.Services.Website.Activities
             return activities;
         }
 
+
         // ✅ Get Activity by ID
         public async Task<ActivityDTO?> GetActivityByIdAsync(int activityId)
         {
-            string query = "SELECT * FROM activities WHERE activity_id = @ActivityId";
+            string procedureName = "GetActivityById";
             _dataManager.ClearParameters();
-            _dataManager.AddParameter("@ActivityId", activityId);
+            _dataManager.AddParameter("@p_activity_id", activityId);
 
-            DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
             if (result.Rows.Count == 0) return null;
 
             DataRow row = result.Rows[0];
@@ -61,6 +62,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
             };
         }
+
 
         // ✅ Create Activity with Role-Based Validation
         public async Task<bool> CreateActivityAsync(ActivityDTO activity, ClaimsPrincipal user)
@@ -135,11 +137,13 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 _dataManager.AddParameter("@p_activity_name", string.IsNullOrWhiteSpace(activity.ActivityName) ? DBNull.Value : activity.ActivityName);
                 _dataManager.AddParameter("@p_description", string.IsNullOrWhiteSpace(activity.Description) ? DBNull.Value : activity.Description);
                 _dataManager.AddParameter("@p_committee_id", activity.CommitteeId);
-                _dataManager.AddParameter("@p_homestay_id", activity.HomestayId.HasValue ? activity.HomestayId.Value : DBNull.Value);
+                _dataManager.AddParameter("@p_homestay_id", activity.HomestayId ?? (object)DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
 
-                bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
+                DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
+                bool success = result.Rows.Count > 0 && Convert.ToInt32(result.Rows[0]["success"]) == 1;
+
                 if (success)
                     _logger.LogInformation("Activity updated successfully: {ActivityId}", activityId);
                 else
@@ -153,6 +157,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 return false;
             }
         }
+
 
         // ✅ Delete Activity with Role-Based Validation
         public async Task<bool> DeleteActivityAsync(int activityId, ClaimsPrincipal user)
@@ -179,12 +184,14 @@ namespace DPCV_API.BAL.Services.Website.Activities
 
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("p_activity_id", activityId);
-                bool success = await _dataManager.ExecuteNonQueryAsync("DeleteActivity", CommandType.StoredProcedure);
+                DataTable result = await _dataManager.ExecuteQueryAsync("DeleteActivity", CommandType.StoredProcedure);
+                bool success = result.Rows.Count > 0 && Convert.ToInt32(result.Rows[0]["success"]) == 1;
 
                 if (success)
-                {
                     _logger.LogInformation("Activity deleted successfully: {ActivityId}", activityId);
-                }
+                else
+                    _logger.LogWarning("No activity record was deleted for: {ActivityId}", activityId);
+
                 return success;
             }
             catch (Exception ex)
@@ -193,5 +200,6 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 return false;
             }
         }
+
     }
 }
