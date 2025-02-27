@@ -6,6 +6,14 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAllOrigins",
+//        policy => policy.AllowAnyOrigin()
+//                        .AllowAnyMethod()
+//                        .AllowAnyHeader());
+//});
+
 // Add CORS policy
 builder.Services.AddCors(options =>
 {
@@ -112,6 +120,10 @@ if (app.Environment.IsDevelopment())
     //    options.RoutePrefix = string.Empty; // Makes Swagger UI accessible at `/`
     //});
 }
+
+app.UseCors("AllowAngular");
+
+//app.UseCors("AllowAllOrigins");
 
 app.UseHttpsRedirection();
 
