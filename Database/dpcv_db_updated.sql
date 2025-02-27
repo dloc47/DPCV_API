@@ -38,7 +38,7 @@ CREATE TABLE `activities` (
   KEY `verification_status_id` (`verification_status_id`),
   CONSTRAINT `activities_ibfk_1` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE,
   CONSTRAINT `activities_ibfk_2` FOREIGN KEY (`homestay_id`) REFERENCES `homestays` (`homestay_id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,7 +47,7 @@ CREATE TABLE `activities` (
 
 LOCK TABLES `activities` WRITE;
 /*!40000 ALTER TABLE `activities` DISABLE KEYS */;
-INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.',1,NULL,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.',2,NULL,0,2);
+INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.',1,NULL,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.',2,NULL,0,2),(4,'Test Activity','Lorem Ipsum lassan',2,NULL,1,2),(13,'Fixed Response body2','string',1,NULL,1,2),(14,'Fixed Response body3','string',1,NULL,1,2),(15,'Fixed Response body4','string',1,NULL,1,2),(16,'Fixed Response body5','string',1,NULL,1,2);
 /*!40000 ALTER TABLE `activities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -366,6 +366,38 @@ UNLOCK TABLES;
 --
 -- Dumping routines for database 'dpcv_db_updated'
 --
+/*!50003 DROP PROCEDURE IF EXISTS `CreateActivity` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateActivity`(
+    IN p_activity_name VARCHAR(255),
+    IN p_description TEXT,
+    IN p_committee_id INT,
+    IN p_homestay_id INT,
+    IN p_isVerifiable BOOLEAN,
+    IN p_verification_status_id INT
+)
+BEGIN
+    INSERT INTO activities (
+        activity_name, description, committee_id, homestay_id, isVerifiable, verification_status_id
+    ) VALUES (
+        p_activity_name, p_description, p_committee_id, 
+        NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
+        p_isVerifiable, p_verification_status_id
+    );
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `CreateDistrict` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -383,6 +415,33 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateDistrict`(
 BEGIN
     INSERT INTO districts (district_name, region) 
     VALUES (p_district_name, p_region);
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `DeleteActivity` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `DeleteActivity`(
+    IN p_activity_id INT
+)
+BEGIN
+    DECLARE rows_affected INT;
+
+    DELETE FROM activities WHERE activity_id = p_activity_id;
+    SET rows_affected = ROW_COUNT();
+
+    -- Return 1 if delete was successful, 0 otherwise
+    SELECT rows_affected AS success;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -469,6 +528,61 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetActivityById` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetActivityById`(IN p_activity_id INT)
+BEGIN
+    SELECT 
+        activity_id, 
+        activity_name, 
+        description, 
+        committee_id, 
+        homestay_id, 
+        isVerifiable, 
+        verification_status_id
+    FROM activities
+    WHERE activity_id = p_activity_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetAllActivities` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllActivities`()
+BEGIN
+    SELECT 
+        activity_id, 
+        activity_name, 
+        description,
+        committee_id,
+        homestay_id,
+        isVerifiable,
+        verification_status_id
+    FROM activities;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `GetEntityCounts` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -519,6 +633,8 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserByEmail`(
     IN p_email VARCHAR(191)
+    
+    -- try@admin.com - admin123
 )
 BEGIN
     SELECT 
@@ -527,7 +643,7 @@ BEGIN
         u.email AS Email,
         u.password AS Password,
         u.role_id AS RoleId,
-        r.role_name AS RoleName,  -- If you need role name
+        r.role_name AS RoleName,  -- If we need role name
         u.district_id AS DistrictId,
         u.is_active AS IsActive,
         u.created_at AS CreatedAt,
@@ -651,6 +767,48 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `UpdateActivity` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateActivity`(
+    IN p_activity_id INT,
+    IN p_activity_name VARCHAR(255),
+    IN p_description TEXT,
+    IN p_committee_id INT,
+    IN p_homestay_id INT,
+    IN p_isVerifiable BOOLEAN,
+    IN p_verification_status_id INT
+)
+BEGIN
+    DECLARE rows_affected INT;
+
+    UPDATE activities
+    SET 
+        activity_name = COALESCE(NULLIF(p_activity_name, ''), activity_name),
+        description = COALESCE(NULLIF(p_description, ''), description),
+        committee_id = p_committee_id,
+        homestay_id = NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
+        isVerifiable = p_isVerifiable,
+        verification_status_id = p_verification_status_id
+    WHERE activity_id = p_activity_id;
+
+    SET rows_affected = ROW_COUNT();
+
+    -- Return 1 if update was successful, 0 otherwise
+    SELECT rows_affected AS success;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `UpdateDistrict` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -741,4 +899,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-22 14:55:37
+-- Dump completed on 2025-02-27 16:07:01
