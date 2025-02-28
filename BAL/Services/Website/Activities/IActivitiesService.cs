@@ -10,5 +10,8 @@ namespace DPCV_API.BAL.Services.Website.Activities
         Task<bool> CreateActivityAsync(ActivityDTO activity, ClaimsPrincipal user);
         Task<bool> UpdateActivityAsync(int activityId, ActivityDTO activity, ClaimsPrincipal user);
         Task<bool> DeleteActivityAsync(int activityId, ClaimsPrincipal user);
+        Task<(bool success, string message)> ArchiveActivityAsync(int activityId, ClaimsPrincipal user);
+        Task<(bool success, string message)> UnarchiveActivityAsync(int activityId, ClaimsPrincipal user);
+
     }
 }

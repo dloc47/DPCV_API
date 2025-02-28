@@ -17,6 +17,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
         }
 
         // ✅ Get All Activities
+        // ✅ Get All Activities
         public async Task<List<ActivityDTO>> GetAllActivitiesAsync()
         {
             string procedureName = "GetAllActivities";
@@ -33,11 +34,13 @@ namespace DPCV_API.BAL.Services.Website.Activities
                     CommitteeId = Convert.ToInt32(row["committee_id"]),
                     HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
-                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    is_active = Convert.ToInt32(row["is_active"])
                 });
             }
             return activities;
         }
+
 
 
         // ✅ Get Activity by ID
@@ -59,7 +62,8 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 CommitteeId = Convert.ToInt32(row["committee_id"]),
                 HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
                 IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
-                VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
+                VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                is_active = Convert.ToInt32(row["is_active"])
             };
         }
 
@@ -91,6 +95,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId.HasValue ? activity.HomestayId.Value : DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
+                _dataManager.AddParameter("@p_is_active", activity.is_active);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
                 if (success)
@@ -140,6 +145,7 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId ?? (object)DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
+                _dataManager.AddParameter("@p_is_active", activity.is_active);
 
                 DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
                 bool success = result.Rows.Count > 0 && Convert.ToInt32(result.Rows[0]["success"]) == 1;
@@ -200,6 +206,81 @@ namespace DPCV_API.BAL.Services.Website.Activities
                 return false;
             }
         }
+
+        // ✅ Archive Activity (Set is_active = 0)
+        public async Task<(bool success, string message)> ArchiveActivityAsync(int activityId, ClaimsPrincipal user)
+        {
+            return await ToggleActivityStatusAsync(activityId, false, user);
+        }
+
+        // ✅ Unarchive Activity (Set is_active = 1)
+        public async Task<(bool success, string message)> UnarchiveActivityAsync(int activityId, ClaimsPrincipal user)
+        {
+            return await ToggleActivityStatusAsync(activityId, true, user);
+        }
+
+        // ✅ Helper Method to Toggle is_active
+        // ✅ Helper Method to Toggle is_active
+        private async Task<(bool success, string message)> ToggleActivityStatusAsync(int activityId, bool isActive, ClaimsPrincipal user)
+        {
+            try
+            {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                // Check if the activity exists and get current is_active status
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_activity_id", activityId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetActivityById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0)
+                    return (false, "Activity does not exist.");
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                bool currentStatus = Convert.ToBoolean(dt.Rows[0]["is_active"]);
+
+                // If the status is already set, return an appropriate message
+                if (currentStatus == isActive)
+                {
+                    string alreadyMessage = isActive ? "Activity is already active." : "Activity is already archived.";
+                    return (false, alreadyMessage);
+                }
+
+                if (roleId == 2 && existingCommitteeId != committeeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to modify activity status: {ActivityId}", activityId);
+                    return (false, "You are not authorized to modify this activity.");
+                }
+
+                // Call stored procedure to update is_active
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_activity_id", activityId);
+                _dataManager.AddParameter("@p_is_active", isActive);
+
+                DataTable result = await _dataManager.ExecuteQueryAsync("ToggleActivityStatus", CommandType.StoredProcedure);
+                bool success = result.Rows.Count > 0 && Convert.ToInt32(result.Rows[0]["success"]) == 1;
+
+                if (success)
+                {
+                    _logger.LogInformation("Activity status updated successfully: {ActivityId}, Active: {IsActive}", activityId, isActive);
+                    return (true, isActive ? "Activity unarchived successfully." : "Activity archived successfully.");
+                }
+                else
+                {
+                    _logger.LogWarning("No activity record was updated for: {ActivityId}", activityId);
+                    return (false, "Failed to update activity status.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating activity status: {ActivityId}", activityId);
+                return (false, "An error occurred while updating the activity status.");
+            }
+        }
+
+
 
     }
 }

@@ -101,5 +101,33 @@ namespace DPCV_API.Controllers.Website
             return Ok(new { message = "Activity deleted successfully." });
         }
 
+        // ✅ Archive Activity (Set is_active = 0)
+        [HttpPut("{id}/archive")]
+        [Authorize]
+        public async Task<IActionResult> ArchiveActivity(int id)
+        {
+            var (success, message) = await _activityService.ArchiveActivityAsync(id, User);
+
+            if (!success)
+                return StatusCode(StatusCodes.Status400BadRequest, new { message });
+
+            return Ok(new { message });
+        }
+
+        // ✅ Unarchive Activity (Set is_active = 1)
+        [HttpPut("{id}/unarchive")]
+        [Authorize]
+        public async Task<IActionResult> UnarchiveActivity(int id)
+        {
+            var (success, message) = await _activityService.UnarchiveActivityAsync(id, User);
+
+            if (!success)
+                return StatusCode(StatusCodes.Status400BadRequest, new { message });
+
+            return Ok(new { message });
+        }
+
+
+
     }
 }
