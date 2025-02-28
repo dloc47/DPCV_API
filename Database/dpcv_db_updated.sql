@@ -32,13 +32,14 @@ CREATE TABLE `activities` (
   `homestay_id` int DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`activity_id`),
   KEY `committee_id` (`committee_id`),
   KEY `homestay_id` (`homestay_id`),
   KEY `verification_status_id` (`verification_status_id`),
   CONSTRAINT `activities_ibfk_1` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE,
   CONSTRAINT `activities_ibfk_2` FOREIGN KEY (`homestay_id`) REFERENCES `homestays` (`homestay_id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,7 +48,7 @@ CREATE TABLE `activities` (
 
 LOCK TABLES `activities` WRITE;
 /*!40000 ALTER TABLE `activities` DISABLE KEYS */;
-INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.',1,NULL,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.',2,NULL,0,2),(4,'Test Activity','Lorem Ipsum lassan',2,NULL,1,2),(13,'Fixed Response body2','string',1,NULL,1,2),(14,'Fixed Response body3','string',1,NULL,1,2),(15,'Fixed Response body4','string',1,NULL,1,2),(16,'Fixed Response body5','string',1,NULL,1,2);
+INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.',1,NULL,1,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.',2,NULL,0,2,1),(4,'Test Activity','Lorem Ipsum lassan',2,NULL,1,2,1),(13,'Fixed Response body2','string',1,NULL,1,2,1),(14,'Fixed Response body3','string',1,NULL,1,2,1),(15,'Fixed Response body4','string',1,NULL,1,2,1),(16,'Fixed Response body5','string',1,NULL,1,2,1);
 /*!40000 ALTER TABLE `activities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -68,6 +69,7 @@ CREATE TABLE `committees` (
   `tags` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`committee_id`),
   KEY `district_id` (`district_id`),
   KEY `verification_status_id` (`verification_status_id`),
@@ -81,7 +83,7 @@ CREATE TABLE `committees` (
 
 LOCK TABLES `committees` WRITE;
 /*!40000 ALTER TABLE `committees` DISABLE KEYS */;
-INSERT INTO `committees` VALUES (1,'East Sikkim Committee',1,'9876543210','east@committee.com','East Sikkim, India','[\"Tourism\", \"Eco\"]',1,1),(2,'West Sikkim Committee',2,'9876543211','west@committee.com','West Sikkim, India','[\"Adventure\", \"Cultural\"]',1,2);
+INSERT INTO `committees` VALUES (1,'East Sikkim Committee',1,'9876543210','east@committee.com','East Sikkim, India','[\"Tourism\", \"Eco\"]',1,1,1),(2,'West Sikkim Committee',2,'9876543211','west@committee.com','West Sikkim, India','[\"Adventure\", \"Cultural\"]',1,2,1);
 /*!40000 ALTER TABLE `committees` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -129,6 +131,7 @@ CREATE TABLE `events` (
   `tags` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`event_id`),
   KEY `committee_id` (`committee_id`),
   KEY `verification_status_id` (`verification_status_id`),
@@ -142,7 +145,7 @@ CREATE TABLE `events` (
 
 LOCK TABLES `events` WRITE;
 /*!40000 ALTER TABLE `events` DISABLE KEYS */;
-INSERT INTO `events` VALUES (1,'East Sikkim Festival','Annual festival of East Sikkim showcasing cultural heritage.','2025-03-10','2025-03-15','East Sikkim',1,'[\"Festival\", \"Cultural\"]',1,1),(2,'West Sikkim Adventure','An adventure sports event held in West Sikkim.','2025-05-20','2025-05-25','West Sikkim',2,'[\"Adventure\", \"Sports\"]',0,2);
+INSERT INTO `events` VALUES (1,'East Sikkim Festival','Annual festival of East Sikkim showcasing cultural heritage.','2025-03-10','2025-03-15','East Sikkim',1,'[\"Festival\", \"Cultural\"]',1,1,1),(2,'West Sikkim Adventure','An adventure sports event held in West Sikkim.','2025-05-20','2025-05-25','West Sikkim',2,'[\"Adventure\", \"Sports\"]',0,2,1);
 /*!40000 ALTER TABLE `events` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -165,6 +168,7 @@ CREATE TABLE `homestays` (
   `tags` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`homestay_id`),
   KEY `committee_id` (`committee_id`),
   KEY `verification_status_id` (`verification_status_id`),
@@ -178,7 +182,7 @@ CREATE TABLE `homestays` (
 
 LOCK TABLES `homestays` WRITE;
 /*!40000 ALTER TABLE `homestays` DISABLE KEYS */;
-INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]',1,1),(2,'Riverfront Homestay',2,'West Sikkim, India','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]',0,2);
+INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]',0,2,1);
 /*!40000 ALTER TABLE `homestays` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -253,6 +257,7 @@ CREATE TABLE `products` (
   `tags` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`product_id`),
   KEY `committee_id` (`committee_id`),
   KEY `homestay_id` (`homestay_id`),
@@ -268,7 +273,7 @@ CREATE TABLE `products` (
 
 LOCK TABLES `products` WRITE;
 /*!40000 ALTER TABLE `products` DISABLE KEYS */;
-INSERT INTO `products` VALUES (1,'Sikkim Organic Tea','Organic tea grown in East Sikkim.',500.00,1,NULL,'[\"Organic\", \"Tea\"]',1,1),(2,'Handmade Woolen Shawl','Woolen shawl handmade by local artisans of West Sikkim.',1500.00,2,NULL,'[\"Handmade\", \"Woolen\"]',0,2);
+INSERT INTO `products` VALUES (1,'Sikkim Organic Tea','Organic tea grown in East Sikkim.',500.00,1,NULL,'[\"Organic\", \"Tea\"]',1,1,1),(2,'Handmade Woolen Shawl','Woolen shawl handmade by local artisans of West Sikkim.',1500.00,2,NULL,'[\"Handmade\", \"Woolen\"]',0,2,1);
 /*!40000 ALTER TABLE `products` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -382,15 +387,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateActivity`(
     IN p_committee_id INT,
     IN p_homestay_id INT,
     IN p_isVerifiable BOOLEAN,
-    IN p_verification_status_id INT
+    IN p_verification_status_id INT,
+    IN p_is_active BOOLEAN
 )
 BEGIN
     INSERT INTO activities (
-        activity_name, description, committee_id, homestay_id, isVerifiable, verification_status_id
+        activity_name, description, committee_id, homestay_id, isVerifiable, verification_status_id, is_active
     ) VALUES (
         p_activity_name, p_description, p_committee_id, 
         NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
-        p_isVerifiable, p_verification_status_id
+        p_isVerifiable, p_verification_status_id, p_is_active
     );
 END ;;
 DELIMITER ;
@@ -547,7 +553,8 @@ BEGIN
         committee_id, 
         homestay_id, 
         isVerifiable, 
-        verification_status_id
+        verification_status_id,
+        is_active
     FROM activities
     WHERE activity_id = p_activity_id;
 END ;;
@@ -575,7 +582,8 @@ BEGIN
         committee_id,
         homestay_id,
         isVerifiable,
-        verification_status_id
+        verification_status_id,
+        is_active
     FROM activities;
 END ;;
 DELIMITER ;
@@ -767,6 +775,35 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `ToggleActivityStatus` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `ToggleActivityStatus`(
+    IN p_activity_id INT,
+    IN p_is_active TINYINT(1)
+)
+BEGIN
+    DECLARE rows_affected INT;
+
+    UPDATE activities
+    SET is_active = p_is_active
+    WHERE activity_id = p_activity_id;
+
+    SET rows_affected = ROW_COUNT();
+    SELECT rows_affected AS success;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `UpdateActivity` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -784,7 +821,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateActivity`(
     IN p_committee_id INT,
     IN p_homestay_id INT,
     IN p_isVerifiable BOOLEAN,
-    IN p_verification_status_id INT
+    IN p_verification_status_id INT,
+    IN p_is_active BOOLEAN
 )
 BEGIN
     DECLARE rows_affected INT;
@@ -796,7 +834,8 @@ BEGIN
         committee_id = p_committee_id,
         homestay_id = NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
         isVerifiable = p_isVerifiable,
-        verification_status_id = p_verification_status_id
+        verification_status_id = p_verification_status_id,
+        is_active = p_is_active
     WHERE activity_id = p_activity_id;
 
     SET rows_affected = ROW_COUNT();
@@ -899,4 +938,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-02-27 16:07:01
+-- Dump completed on 2025-02-28 11:11:02
