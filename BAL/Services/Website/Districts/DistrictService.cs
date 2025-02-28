@@ -1,6 +1,7 @@
 ﻿using DPCV_API.Configuration.DbContext;
 using DPCV_API.Models.Website.DistrictModel;
 using System.Data;
+using System.Security.Claims;
 
 namespace DPCV_API.Services.DistrictService
 {
@@ -19,45 +20,77 @@ namespace DPCV_API.Services.DistrictService
         // ✅ Get All Districts
         public async Task<List<DistrictDTO>> GetAllDistrictsAsync()
         {
-            string query = "SELECT * FROM districts";
-            DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+            string spName = "GetAllDistricts";
             List<DistrictDTO> districts = new();
 
-            foreach (DataRow row in result.Rows)
+            try
             {
-                districts.Add(new DistrictDTO
+                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
+
+                foreach (DataRow row in result.Rows)
                 {
-                    DistrictId = Convert.ToInt32(row["district_id"]),
-                    DistrictName = row["district_name"].ToString()!,
-                    Region = row["region"].ToString()!
-                });
+                    districts.Add(new DistrictDTO
+                    {
+                        DistrictId = Convert.ToInt32(row["district_id"]),
+                        DistrictName = row["district_name"].ToString()!,
+                        Region = row["region"].ToString()!
+                    });
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching districts.");
+                throw;
+            }
+
             return districts;
         }
 
         // ✅ Get District by ID
         public async Task<DistrictDTO?> GetDistrictByIdAsync(int districtId)
         {
-            string query = "SELECT * FROM districts WHERE district_id = @DistrictId";
-            _dataManager.ClearParameters();
-            _dataManager.AddParameter("@DistrictId", districtId);
+            string spName = "GetDistrictById";
 
-            DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
-            if (result.Rows.Count == 0) return null;
-
-            DataRow row = result.Rows[0];
-            return new DistrictDTO
+            try
             {
-                DistrictId = Convert.ToInt32(row["district_id"]),
-                DistrictName = row["district_name"].ToString()!,
-                Region = row["region"].ToString()!
-            };
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@districtId", districtId);
+                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
+
+                if (result.Rows.Count == 0)
+                {
+                    _logger.LogWarning($"District with ID {districtId} not found.");
+                    return null;
+                }
+
+                DataRow row = result.Rows[0];
+                return new DistrictDTO
+                {
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching district with ID {districtId}.");
+                throw;
+            }
         }
 
-        public async Task<bool> CreateDistrictAsync(DistrictDTO district)
+        public async Task<bool> CreateDistrictAsync(DistrictDTO district, ClaimsPrincipal user)
         {
             try
             {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+
+                if (roleId != 1)
+                {
+                    _logger.LogWarning("Unauthorized attempt to create a district.");
+                    return false;
+                }
+
                 string procedureName = "CreateDistrict";
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_district_name", district.DistrictName);
@@ -77,33 +110,46 @@ namespace DPCV_API.Services.DistrictService
             }
         }
 
-        public async Task<bool> UpdateDistrictAsync(int districtId, DistrictDTO district)
+        public async Task<bool> UpdateDistrictAsync(DistrictDTO district, ClaimsPrincipal user)
         {
             try
             {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+
+                if (roleId != 1)
+                {
+                    _logger.LogWarning("Unauthorized attempt to update a district.");
+                    return false;
+                }
+
                 string procedureName = "UpdateDistrict";
                 _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_district_id", district.DistrictId);
 
-                _dataManager.AddParameter("@p_district_id", districtId);
-                // Only send non-null and non-empty parameters
-                _dataManager.AddParameter("@p_district_name", string.IsNullOrWhiteSpace(district.DistrictName) ? DBNull.Value : district.DistrictName);
-                _dataManager.AddParameter("@p_region", string.IsNullOrWhiteSpace(district.Region) ? DBNull.Value : district.Region);
+                if (!string.IsNullOrWhiteSpace(district.DistrictName))
+                    _dataManager.AddParameter("@p_district_name", district.DistrictName);
+                if (!string.IsNullOrWhiteSpace(district.Region))
+                    _dataManager.AddParameter("@p_region", district.Region);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
-
                 if (success)
-                    _logger.LogInformation("District updated successfully: {DistrictId}", districtId);
+                {
+                    _logger.LogInformation("District updated successfully: {DistrictId}", district.DistrictId);
+                }
                 else
-                    _logger.LogWarning("No district record was updated for: {DistrictId}", districtId);
-
+                {
+                    _logger.LogWarning("No district record was updated for: {DistrictId}", district.DistrictId);
+                }
                 return success;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating district: {DistrictId}", districtId);
+                _logger.LogError(ex, "Error updating district: {DistrictId}", district.DistrictId);
                 return false;
             }
         }
+
 
 
     }

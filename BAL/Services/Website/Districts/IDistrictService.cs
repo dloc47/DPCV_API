@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using DPCV_API.Models;
+﻿using System.Security.Claims;
 using DPCV_API.Models.Website.DistrictModel;
 
 namespace DPCV_API.Services
@@ -9,7 +7,7 @@ namespace DPCV_API.Services
     {
         Task<List<DistrictDTO>> GetAllDistrictsAsync();
         Task<DistrictDTO?> GetDistrictByIdAsync(int districtId);
-        Task<bool> CreateDistrictAsync(DistrictDTO district);
-        Task<bool> UpdateDistrictAsync(int districtId, DistrictDTO district);
+        Task<bool> CreateDistrictAsync(DistrictDTO district, ClaimsPrincipal user);
+        Task<bool> UpdateDistrictAsync(DistrictDTO district, ClaimsPrincipal user);
     }
 }

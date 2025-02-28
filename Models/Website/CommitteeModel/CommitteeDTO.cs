@@ -13,6 +13,7 @@ namespace DPCV_API.Models.Website.CommitteeModel
         public JsonDocument? Tags { get; set; } // JSON data type
         public bool IsVerifiable { get; set; }
         public int? VerificationStatusId { get; set; }
+        public int is_active { get; set; }
     }
 
     public class VillageDTO
@@ -21,5 +22,6 @@ namespace DPCV_API.Models.Website.CommitteeModel
         public string CommitteeName { get; set; } = string.Empty;
         public int DistrictId { get; set; }
         public int? VerificationStatusId { get; set; }
+        public int is_active { get; set; }
     }
 }

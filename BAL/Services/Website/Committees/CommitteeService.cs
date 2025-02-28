@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -22,12 +23,12 @@ namespace DPCV_API.BAL.Services.Website.Committees
 
         public async Task<List<VillageDTO>> GetAllVillageNamesAsync()
         {
-            string query = "SELECT committee_id, committee_name, district_id, verification_status_id FROM committees";
+            string spName = "GetAllVillageNames";
             List<VillageDTO> committees = new();
 
             try
             {
-                DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
 
                 foreach (DataRow row in result.Rows)
                 {
@@ -36,14 +37,15 @@ namespace DPCV_API.BAL.Services.Website.Committees
                         CommitteeId = Convert.ToInt32(row["committee_id"]),
                         CommitteeName = row["committee_name"].ToString()!,
                         DistrictId = Convert.ToInt32(row["district_id"]),
-                        VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
+                        VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                        is_active = Convert.ToInt32(row["is_active"])
                     });
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching village names.");
-                throw new ApplicationException("Failed to fetch village names. Please try again later.");
+                throw;
             }
 
             return committees;
@@ -51,17 +53,16 @@ namespace DPCV_API.BAL.Services.Website.Committees
 
         public async Task<List<CommitteeDTO>> GetAllCommitteesAsync()
         {
-            string query = "SELECT * FROM committees";
-
-            List<CommitteeDTO> homestayCommittees = new();
+            string spName = "GetAllCommittees";
+            List<CommitteeDTO> committees = new();
 
             try
             {
-                DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
 
                 foreach (DataRow row in result.Rows)
                 {
-                    homestayCommittees.Add(new CommitteeDTO
+                    committees.Add(new CommitteeDTO
                     {
                         CommitteeId = Convert.ToInt32(row["committee_id"]),
                         CommitteeName = row["committee_name"].ToString()!,
@@ -71,33 +72,29 @@ namespace DPCV_API.BAL.Services.Website.Committees
                         Address = row["address"]?.ToString(),
                         Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
                         IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
-                        VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
+                        VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                        is_active = Convert.ToInt32(row["is_active"])
                     });
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching committees.");
-                throw new ApplicationException("Failed to fetch committees. Please try again later.");
+                throw;
             }
 
-            return homestayCommittees;
+            return committees;
         }
 
         public async Task<CommitteeDTO?> GetCommitteeByIdAsync(int committeeId)
         {
-            string query = @"
-                SELECT 
-                    committee_id, committee_name, district_id, 
-                    contact_number, email, address, tags, 
-                    isVerifiable, verification_status_id 
-                FROM committees WHERE committee_id = @CommitteeId";
+            string spName = "GetCommitteeById";
 
             try
             {
                 _dataManager.ClearParameters();
-                _dataManager.AddParameter("@CommitteeId", committeeId);
-                DataTable result = await _dataManager.ExecuteQueryAsync(query, CommandType.Text);
+                _dataManager.AddParameter("@p_committee_id", committeeId);
+                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
 
                 if (result.Rows.Count == 0)
                 {
@@ -116,14 +113,224 @@ namespace DPCV_API.BAL.Services.Website.Committees
                     Address = row["address"]?.ToString(),
                     Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
-                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    is_active = Convert.ToInt32(row["is_active"])
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error fetching committee with ID {committeeId}.");
-                throw new ApplicationException("Failed to fetch committee details. Please try again later.");
+                throw;
             }
         }
+
+
+        public async Task<bool> CreateCommitteeAsync(CommitteeDTO committeeDto, ClaimsPrincipal user)
+        {
+            try
+            {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                if (roleId == 0 || (roleId == 2 && committeeId != committeeDto.CommitteeId))
+                {
+                    _logger.LogWarning("Unauthorized attempt to create a committee.");
+                    return false;
+                }
+
+                int verificationStatus = (roleId == 1) ? 2 : 1;
+
+                string procedureName = "CreateCommittee";
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_committee_name", committeeDto.CommitteeName);
+                _dataManager.AddParameter("@p_district_id", committeeDto.DistrictId);
+                _dataManager.AddParameter("@p_contact_number", committeeDto.ContactNumber ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_email", committeeDto.Email ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_address", committeeDto.Address ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", committeeDto.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_isVerifiable", committeeDto.IsVerifiable);
+                _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
+                _dataManager.AddParameter("@p_is_active", committeeDto.is_active);
+
+                bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
+                if (success)
+                {
+                    _logger.LogInformation("Committee created successfully: {CommitteeName}", committeeDto.CommitteeName);
+                }
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating committee: {CommitteeName}", committeeDto.CommitteeName);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateCommitteeAsync(CommitteeDTO committeeDto, ClaimsPrincipal user)
+        {
+            try
+            {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_committee_id", committeeDto.CommitteeId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetCommitteeById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0) return false;
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                if (roleId == 2 && existingCommitteeId != committeeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to update committee: {CommitteeId}", committeeDto.CommitteeId);
+                    return false;
+                }
+
+                int verificationStatus = (roleId == 1) ? 2 : 1;
+
+                string procedureName = "UpdateCommittee";
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_committee_id", committeeDto.CommitteeId);
+                _dataManager.AddParameter("@p_committee_name", committeeDto.CommitteeName);
+                _dataManager.AddParameter("@p_district_id", committeeDto.DistrictId);
+                _dataManager.AddParameter("@p_contact_number", committeeDto.ContactNumber ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_email", committeeDto.Email ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_address", committeeDto.Address ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", committeeDto.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_isVerifiable", committeeDto.IsVerifiable);
+                _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
+                _dataManager.AddParameter("@p_is_active", committeeDto.is_active);
+
+                bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
+                if (success)
+                    _logger.LogInformation("Committee updated successfully: {CommitteeId}", committeeDto.CommitteeId);
+                else
+                    _logger.LogWarning("No committee record was updated for: {CommitteeId}", committeeDto.CommitteeId);
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating committee: {CommitteeId}", committeeDto.CommitteeId);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteCommitteeAsync(int committeeId, ClaimsPrincipal user)
+        {
+            try
+            {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? committeeIdUser = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_committee_id", committeeId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetCommitteeById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0) return false;
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                if (roleId == 2 && existingCommitteeId != committeeIdUser)
+                {
+                    _logger.LogWarning("Unauthorized attempt to delete committee: {CommitteeId}", committeeId);
+                    return false;
+                }
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_committee_id", committeeId);
+                bool success = await _dataManager.ExecuteNonQueryAsync("DeleteCommittee", CommandType.StoredProcedure);
+                if (success)
+                    _logger.LogInformation("Committee deleted successfully: {CommitteeId}", committeeId);
+                else
+                    _logger.LogWarning("No committee record was deleted for: {CommitteeId}", committeeId);
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting committee: {CommitteeId}", committeeId);
+                return false;
+            }
+        }
+
+        // ✅ Archive Committee (Set is_active = 0)
+        public async Task<(bool success, string message)> ArchiveCommitteeAsync(int committeeId, ClaimsPrincipal user)
+        {
+            return await ToggleCommitteeStatusAsync(committeeId, false, user);
+        }
+
+        // ✅ Unarchive Committee (Set is_active = 1)
+        public async Task<(bool success, string message)> UnarchiveCommitteeAsync(int committeeId, ClaimsPrincipal user)
+        {
+            return await ToggleCommitteeStatusAsync(committeeId, true, user);
+        }
+
+        // ✅ Helper Method to Toggle is_active
+        private async Task<(bool success, string message)> ToggleCommitteeStatusAsync(int committeeId, bool isActive, ClaimsPrincipal user)
+        {
+            try
+            {
+                var roleClaim = user.FindFirst(ClaimTypes.Role);
+                var committeeClaim = user.FindFirst("CommitteeId");
+
+                int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
+                int? userCommitteeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : (int?)null;
+
+                // Check if the committee exists and get current is_active status
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("p_committee_id", committeeId);
+                DataTable dt = await _dataManager.ExecuteQueryAsync("GetCommitteeById", CommandType.StoredProcedure);
+                if (dt.Rows.Count == 0)
+                    return (false, "Committee does not exist.");
+
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                bool currentStatus = Convert.ToBoolean(dt.Rows[0]["is_active"]);
+
+                // If the status is already set, return an appropriate message
+                if (currentStatus == isActive)
+                {
+                    string alreadyMessage = isActive ? "Committee is already active." : "Committee is already archived.";
+                    return (false, alreadyMessage);
+                }
+
+                if (roleId == 2 && existingCommitteeId != userCommitteeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to modify committee status: {CommitteeId}", committeeId);
+                    return (false, "You are not authorized to modify this committee.");
+                }
+
+                // Call stored procedure to update is_active
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_committee_id", committeeId);
+                _dataManager.AddParameter("@p_is_active", isActive);
+
+                DataTable result = await _dataManager.ExecuteQueryAsync("ToggleCommitteeStatus", CommandType.StoredProcedure);
+                bool success = result.Rows.Count > 0 && Convert.ToInt32(result.Rows[0]["success"]) == 1;
+
+                if (success)
+                {
+                    _logger.LogInformation("Committee status updated successfully: {CommitteeId}, Active: {IsActive}", committeeId, isActive);
+                    return (true, isActive ? "Committee unarchived successfully." : "Committee archived successfully.");
+                }
+                else
+                {
+                    _logger.LogWarning("No committee record was updated for: {CommitteeId}", committeeId);
+                    return (false, "Failed to update committee status.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating committee status: {CommitteeId}", committeeId);
+                return (false, "An error occurred while updating the committee status.");
+            }
+        }
+
     }
 }
