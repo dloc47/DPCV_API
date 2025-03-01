@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using DPCV_API.Models.Website.HomestayModel;
+using DPCV_API.Models.HomestayModel;
 
 namespace DPCV_API.BAL.Services.Homestays
 {

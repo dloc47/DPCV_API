@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace DPCV_API.Models.Website.ProductModel
+namespace DPCV_API.Models.ProductModel
 {
     public class ProductDTO
     {

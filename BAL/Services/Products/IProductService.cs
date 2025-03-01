@@ -1,4 +1,4 @@
-﻿using DPCV_API.Models.Website.ProductModel;
+﻿using DPCV_API.Models.ProductModel;
 using System.Security.Claims;
 
 namespace DPCV_API.BAL.Services.Products

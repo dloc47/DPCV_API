@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using DPCV_API.Models.Website.DistrictModel;
+using DPCV_API.Models.DistrictModel;
 
 namespace DPCV_API.BAL.Services.Districts
 {

@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
 using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.HomestayModel;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using DPCV_API.Models.HomestayModel;
 
 namespace DPCV_API.BAL.Services.Homestays
 {

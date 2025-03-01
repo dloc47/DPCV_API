@@ -1,5 +1,5 @@
 ﻿using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.CommitteeModel;
+using DPCV_API.Models.CommitteeModel;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;

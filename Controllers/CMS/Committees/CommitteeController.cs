@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using DPCV_API.BAL.Services.Committees;
-using DPCV_API.Models.Website.CommitteeModel;
+using DPCV_API.Models.CommitteeModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

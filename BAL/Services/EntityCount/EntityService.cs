@@ -1,6 +1,6 @@
 ﻿using DPCV_API.BAL.Services.EntityCount;
 using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.EntityCount;
+using DPCV_API.Models.EntityCount;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Data;

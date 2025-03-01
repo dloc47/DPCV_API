@@ -1,5 +1,5 @@
 ﻿using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.CMS.Users;
+using DPCV_API.Models.Users;
 using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;

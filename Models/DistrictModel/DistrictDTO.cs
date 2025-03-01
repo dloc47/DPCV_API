@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DPCV_API.Models.Website.DistrictModel
+namespace DPCV_API.Models.DistrictModel
 {
     public class DistrictDTO
     {

@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using DPCV_API.Models.Website.CommitteeModel;
+using DPCV_API.Models.CommitteeModel;
 
 namespace DPCV_API.BAL.Services.Committees
 {

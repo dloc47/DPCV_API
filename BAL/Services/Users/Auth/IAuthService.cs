@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using DPCV_API.Configuration;
-using DPCV_API.Models.CMS.Users;
+using DPCV_API.Models.Users;
 
 namespace DPCV_API.BAL.Services.Users.Auth
 {

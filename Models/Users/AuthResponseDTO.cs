@@ -1,4 +1,4 @@
-﻿namespace DPCV_API.Models.CMS.Users
+﻿namespace DPCV_API.Models.Users
 {
     public class AuthResponseDTO
     {

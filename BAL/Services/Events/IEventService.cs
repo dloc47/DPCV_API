@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using DPCV_API.Models.Website.EventModel;
+using DPCV_API.Models.EventModel;
 
 namespace DPCV_API.BAL.Services.Events
 {

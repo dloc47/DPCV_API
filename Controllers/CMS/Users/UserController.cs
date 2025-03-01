@@ -1,5 +1,5 @@
 ﻿using DPCV_API.BAL.Services.Users;
-using DPCV_API.Models.CMS.Users;
+using DPCV_API.Models.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

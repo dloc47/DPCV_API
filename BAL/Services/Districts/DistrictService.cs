@@ -1,5 +1,5 @@
 ﻿using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.DistrictModel;
+using DPCV_API.Models.DistrictModel;
 using System.Data;
 using System.Security.Claims;
 

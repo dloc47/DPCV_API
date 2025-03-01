@@ -1,4 +1,4 @@
-﻿namespace DPCV_API.Models.Website.EntityCount
+﻿namespace DPCV_API.Models.EntityCount
 {
     public class EntityCountDTO
     {

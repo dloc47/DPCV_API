@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using DPCV_API.Models.Website.EventModel;
 using DPCV_API.BAL.Services.Events;
+using DPCV_API.Models.EventModel;
 
 namespace DPCV_API.Controllers.Website
 {

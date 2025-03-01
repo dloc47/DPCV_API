@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using DPCV_API.Models.CMS.Users;
+using DPCV_API.Models.Users;
 
 public interface IUserService
 {

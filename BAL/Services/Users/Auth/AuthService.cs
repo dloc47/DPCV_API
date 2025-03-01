@@ -6,7 +6,7 @@ using DPCV_API.Configuration.DbContext;
 using DPCV_API.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using DPCV_API.Models.CMS.Users;
+using DPCV_API.Models.Users;
 
 namespace DPCV_API.BAL.Services.Users.Auth
 {

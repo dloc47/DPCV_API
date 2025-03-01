@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace DPCV_API.Models.Website.HomestayModel
+namespace DPCV_API.Models.HomestayModel
 {
     public class HomestayDTO
     {

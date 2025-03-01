@@ -5,7 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.EventModel;
+using DPCV_API.Models.EventModel;
 using Microsoft.Extensions.Logging;
 
 namespace DPCV_API.BAL.Services.Events

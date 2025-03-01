@@ -1,5 +1,5 @@
 ﻿using DPCV_API.BAL.Services.Products;
-using DPCV_API.Models.Website.ProductModel;
+using DPCV_API.Models.ProductModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

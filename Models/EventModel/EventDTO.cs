@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace DPCV_API.Models.Website.EventModel
+namespace DPCV_API.Models.EventModel
 {
     public class EventDTO
     {

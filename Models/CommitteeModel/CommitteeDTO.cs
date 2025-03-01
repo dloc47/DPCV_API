@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace DPCV_API.Models.Website.CommitteeModel
+namespace DPCV_API.Models.CommitteeModel
 {
     public class CommitteeDTO
     {

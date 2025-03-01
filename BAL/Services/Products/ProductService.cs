@@ -1,5 +1,5 @@
 ﻿using DPCV_API.Configuration.DbContext;
-using DPCV_API.Models.Website.ProductModel;
+using DPCV_API.Models.ProductModel;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;

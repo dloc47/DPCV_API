@@ -1,5 +1,5 @@
 ﻿using DPCV_API.BAL.Services.Homestays;
-using DPCV_API.Models.Website.HomestayModel;
+using DPCV_API.Models.HomestayModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

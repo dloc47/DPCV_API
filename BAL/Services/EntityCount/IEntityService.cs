@@ -1,4 +1,4 @@
-﻿using DPCV_API.Models.Website.EntityCount;
+﻿using DPCV_API.Models.EntityCount;
 
 namespace DPCV_API.BAL.Services.EntityCount
 {
