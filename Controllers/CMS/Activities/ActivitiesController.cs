@@ -1,9 +1,7 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using DPCV_API.BAL.Services.Website.Activities;
 using DPCV_API.Models.ActivityModel;
-using DPCV_API.BAL.Services.Website.Events;
+using DPCV_API.BAL.Services.Activities;
 
 namespace DPCV_API.Controllers.Website
 {

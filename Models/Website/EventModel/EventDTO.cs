@@ -14,5 +14,6 @@ namespace DPCV_API.Models.Website.EventModel
         public JsonDocument? Tags { get; set; }
         public bool IsVerifiable { get; set; }
         public int? VerificationStatusId { get; set; }
+        public int is_active { get; set; }
     }
 }

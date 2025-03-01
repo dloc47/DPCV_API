@@ -1,5 +1,5 @@
-﻿using DPCV_API.Models.Website.DistrictModel;
-using DPCV_API.Services;
+﻿using DPCV_API.BAL.Services.Districts;
+using DPCV_API.Models.Website.DistrictModel;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DPCV_API.Controllers

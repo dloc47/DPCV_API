@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using DPCV_API.BAL.Services.Website.Committees;
-using DPCV_API.BAL.Services.Website.EntityCount;
-using DPCV_API.BAL.Services.Website.Events;
-using DPCV_API.BAL.Services.Website.Products;
-using DPCV_API.BAL.Services.Website.SearchFilter;
-using DPCV_API.BAL.Services.Website.Activities;
-using DPCV_API.BAL.Services.Website.Homestays;
-using DPCV_API.Services;
+using DPCV_API.BAL.Services.Events;
+using DPCV_API.BAL.Services.Homestays;
+using DPCV_API.BAL.Services.Activities;
+using DPCV_API.BAL.Services.SearchFilter;
+using DPCV_API.BAL.Services.EntityCount;
+using DPCV_API.BAL.Services.Districts;
+using DPCV_API.BAL.Services.Products;
+using DPCV_API.BAL.Services.Committees;
 
 [Route("api/website")]
 [ApiController]

@@ -1,15 +1,14 @@
-﻿using DPCV_API.BAL.Services.CMS.Auth;
-using DPCV_API.BAL.Services.CMS.User;
-using DPCV_API.BAL.Services.Website.Activities;
-using DPCV_API.BAL.Services.Website.Committees;
-using DPCV_API.BAL.Services.Website.EntityCount;
-using DPCV_API.BAL.Services.Website.Events;
-using DPCV_API.BAL.Services.Website.Homestays;
-using DPCV_API.BAL.Services.Website.Products;
-using DPCV_API.BAL.Services.Website.SearchFilter;
+﻿using DPCV_API.BAL.Services.Activities;
+using DPCV_API.BAL.Services.Committees;
+using DPCV_API.BAL.Services.Districts;
+using DPCV_API.BAL.Services.EntityCount;
+using DPCV_API.BAL.Services.Events;
+using DPCV_API.BAL.Services.Homestays;
+using DPCV_API.BAL.Services.Products;
+using DPCV_API.BAL.Services.SearchFilter;
+using DPCV_API.BAL.Services.Users;
+using DPCV_API.BAL.Services.Users.Auth;
 using DPCV_API.Configuration.DbContext;
-using DPCV_API.Services;
-using DPCV_API.Services.DistrictService;
 
 namespace DPCV_API.Configuration
 {
