@@ -4,6 +4,7 @@ using DPCV_API.BAL.Services.Districts;
 using DPCV_API.BAL.Services.EntityCount;
 using DPCV_API.BAL.Services.Events;
 using DPCV_API.BAL.Services.Homestays;
+using DPCV_API.BAL.Services.Images;
 using DPCV_API.BAL.Services.Products;
 using DPCV_API.BAL.Services.SearchFilter;
 using DPCV_API.BAL.Services.Users;
@@ -28,6 +29,7 @@ namespace DPCV_API.Configuration
             services.AddScoped<IEventService, EventService>();
             services.AddScoped<ISearchfilterService, SearchfilterService>();
             services.AddScoped<IEntityService, EntityService>();
+            services.AddScoped<IImageService, ImageService>();
 
             return services;
         }

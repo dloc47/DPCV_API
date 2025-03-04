@@ -199,11 +199,14 @@ CREATE TABLE `images` (
   `image_name` varchar(255) DEFAULT NULL,
   `entity_type` enum('Admin','Committee','Homestay','Activity','Event','Product') NOT NULL,
   `entity_id` int NOT NULL,
+  `committee_id` int NOT NULL,
   `is_profile_image` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`image_id`),
   KEY `entity_type` (`entity_type`),
-  KEY `entity_id` (`entity_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `entity_id` (`entity_id`),
+  KEY `committee_id` (`committee_id`),
+  CONSTRAINT `fk_images_committees` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -212,7 +215,6 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (1,'uploads/homestays/homestay1.jpg','Mountain View Homestay Front View','Homestay',1,1),(2,'uploads/committees/committee1.jpg','Committee Banner','Committee',2,1),(3,'uploads/products/product1.jpg','Organic Honey','Product',3,0);
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -724,6 +726,27 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `DeleteImage` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `DeleteImage`(
+    IN p_image_id INT
+)
+BEGIN
+    DELETE FROM images WHERE image_id = p_image_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `DeleteProduct` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1185,6 +1208,33 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetImagesByEntity` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetImagesByEntity`(
+    IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
+    IN p_entity_id INT,
+    IN p_committee_id INT
+)
+BEGIN
+    SELECT image_url 
+    FROM images 
+    WHERE entity_type = p_entity_type 
+      AND entity_id = p_entity_id
+      AND committee_id = p_committee_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `GetProductById` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1210,6 +1260,35 @@ BEGIN
         is_active 
     FROM products
     WHERE product_id = p_product_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetProfileImageByEntity` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetProfileImageByEntity`(
+    IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
+    IN p_entity_id INT,
+    IN p_committee_id INT
+)
+BEGIN
+    SELECT image_url 
+    FROM images 
+    WHERE entity_type = p_entity_type 
+      AND entity_id = p_entity_id
+      AND committee_id = p_committee_id
+      AND is_profile_image = 1
+    LIMIT 1;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1266,6 +1345,33 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserById`(IN p_UserId INT)
 BEGIN
     SELECT * FROM Users WHERE user_id = p_UserId;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `InsertImage` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `InsertImage`(
+    IN p_image_url VARCHAR(255),
+    IN p_image_name VARCHAR(255),
+    IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
+    IN p_entity_id INT,
+    IN p_committee_id INT,
+    IN p_is_profile_image TINYINT(1)
+)
+BEGIN
+    INSERT INTO images (image_url, image_name, entity_type, entity_id, committee_id, is_profile_image)
+    VALUES (p_image_url, p_image_name, p_entity_type, p_entity_id, p_committee_id, p_is_profile_image);
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1375,6 +1481,50 @@ BEGIN
     SET IsRevoked = 1, RevokedAt = NOW()
     WHERE UserId = p_user_id 
     AND Token = p_refresh_token;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `SetProfileImage` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `SetProfileImage`(
+    IN p_image_id INT
+)
+BEGIN
+    DECLARE v_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product');
+    DECLARE v_entity_id INT;
+    DECLARE v_committee_id INT;
+
+    -- Get entity details of the image being set as profile
+    SELECT entity_type, entity_id, committee_id 
+    INTO v_entity_type, v_entity_id, v_committee_id
+    FROM images 
+    WHERE image_id = p_image_id;
+
+    -- Ensure the image exists
+    IF v_entity_id IS NOT NULL THEN
+        -- Unset previous profile image for the same entity_id and committee_id
+        UPDATE images 
+        SET is_profile_image = 0 
+        WHERE entity_type = v_entity_type 
+          AND entity_id = v_entity_id 
+          AND committee_id = v_committee_id;
+
+        -- Set the selected image as the new profile image
+        UPDATE images 
+        SET is_profile_image = 1 
+        WHERE image_id = p_image_id;
+    END IF;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1724,6 +1874,30 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `UpdateImage` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateImage`(
+    IN p_image_id INT,
+    IN p_new_name VARCHAR(255)
+)
+BEGIN
+    UPDATE images
+    SET image_name = p_new_name
+    WHERE image_id = p_image_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `UpdateProduct` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1857,4 +2031,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-01 16:16:55
+-- Dump completed on 2025-03-04 21:11:06

@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 //                        .AllowAnyHeader());
 //});
 
-// Add CORS policy
+// ✅ Add CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular",
@@ -23,7 +23,7 @@ builder.Services.AddCors(options =>
                         .AllowAnyHeader());
 });
 
-// Read JWT Secret Key from configuration
+// ✅ Read JWT Secret Key from configuration
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -61,7 +61,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 
-// Add services to the container.
+// ✅ Add services to the container.
 builder.Services.AddControllers();
 
 // ✅ **Configure Swagger to Support JWT Authentication**
@@ -100,16 +100,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// DI Resolver
+// ✅ DI Resolver
 builder.Services.DIBALResolver();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// ✅ Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ✅ Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
