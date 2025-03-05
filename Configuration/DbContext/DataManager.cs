@@ -3,10 +3,10 @@ using System.Data;
 
 namespace DPCV_API.Configuration.DbContext
 {
-    public class DataManager : IDisposable
+    public class DataManager
     {
         private readonly AppDbContext _dbContext;
-        private MySqlCommand _command;
+        private readonly MySqlCommand _command;
 
         public DataManager()
         {
@@ -21,19 +21,27 @@ namespace DPCV_API.Configuration.DbContext
         /// </summary>
         public async Task<DataTable> ExecuteQueryAsync(string query, CommandType commandType)
         {
+            DataTable dataTable = new DataTable();
             try
             {
-                using var command = CreateCommand(query, commandType);
-                using var adapter = new MySqlDataAdapter(command);
-                var dataTable = new DataTable();
-                await Task.Run(() => adapter.Fill(dataTable));
-                return dataTable;
+                using (var command = _dbContext.GetCommand())
+                {
+                    command.CommandText = query;
+                    command.CommandType = commandType;
+
+                    using (var adapter = new MySqlDataAdapter(command))
+                    {
+                        await Task.Run(() => adapter.Fill(dataTable)); // Fill DataTable
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Database query failed: {ex.Message}", ex);
+                throw new Exception($"Database query failed: {ex.Message}");
             }
+            return dataTable;
         }
+
 
         /// <summary>
         /// Executes a SQL command (INSERT, UPDATE, DELETE) and returns true if successful.
@@ -43,14 +51,19 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
-                using var command = CreateCommand(query, commandType);
-                return await command.ExecuteNonQueryAsync() > 0;
+                using (var command = _dbContext.GetCommand())
+                {
+                    command.CommandText = query;
+                    command.CommandType = commandType;
+                    return await command.ExecuteNonQueryAsync() > 0; // Execute query
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Database command failed: {ex.Message}", ex);
+                throw new Exception($"Database command failed: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Executes a SQL query and returns a MySqlDataReader for streaming data row by row.
@@ -60,14 +73,17 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
-                var command = CreateCommand(query, commandType);
+                var command = _dbContext.GetCommand(); // Don't use `using` to keep reader open
+                command.CommandText = query;
+                command.CommandType = commandType;
                 return (MySqlDataReader)await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
             }
             catch (Exception ex)
             {
-                throw new Exception($"Database reader failed: {ex.Message}", ex);
+                throw new Exception($"Database reader failed: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Executes a SQL query and returns a single value of type T (e.g., int, string).
@@ -77,28 +93,34 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
-                using var command = CreateCommand(query, commandType);
-                object? result = await command.ExecuteScalarAsync();
-                return (result == null || result == DBNull.Value) ? default : (T)Convert.ChangeType(result, typeof(T));
+                using (var command = _dbContext.GetCommand())
+                {
+                    command.CommandText = query;
+                    command.CommandType = commandType;
+                    object? result = await command.ExecuteScalarAsync();
+                    return (result == null || result == DBNull.Value) ? default : (T)Convert.ChangeType(result, typeof(T));
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Database scalar query failed: {ex.Message}", ex);
+                throw new Exception($"Database scalar query failed: {ex.Message}");
             }
         }
 
+
+
         /// <summary>
-        /// Adds a parameter to the command.
-        /// Must be called before executing a query.
+        /// Adds a parameter to the SQL command to prevent SQL injection.
+        /// Use this before executing a query that requires parameters.
         /// </summary>
         public void AddParameter(string paramName, object value)
         {
-            _command.Parameters.AddWithValue(paramName, value ?? DBNull.Value);
+            _command.Parameters.AddWithValue(paramName, value);
         }
 
         /// <summary>
-        /// Clears all parameters from the command.
-        /// Call this before executing a new query with different parameters.
+        /// Clears all parameters added to the SQL command.
+        /// Use this to reset parameters before executing a new query.
         /// </summary>
         public void ClearParameters()
         {
@@ -106,28 +128,11 @@ namespace DPCV_API.Configuration.DbContext
         }
 
         /// <summary>
-        /// Creates a new command with the stored parameters.
-        /// Ensures that parameters are applied correctly.
-        /// </summary>
-        private MySqlCommand CreateCommand(string query, CommandType commandType)
-        {
-            var command = _dbContext.GetCommand();
-            command.CommandText = query;
-            command.CommandType = commandType;
-            foreach (MySqlParameter param in _command.Parameters)
-            {
-                command.Parameters.Add(new MySqlParameter(param.ParameterName, param.Value));
-            }
-            return command;
-        }
-
-        /// <summary>
-        /// Disposes of database resources.
+        /// Disposes of database resources when no longer needed.
         /// </summary>
         public void Dispose()
         {
-            _command?.Dispose();
-            _dbContext?.Dispose();
+            _dbContext.Dispose();
         }
     }
 }
