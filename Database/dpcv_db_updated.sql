@@ -62,11 +62,16 @@ DROP TABLE IF EXISTS `committees`;
 CREATE TABLE `committees` (
   `committee_id` int NOT NULL AUTO_INCREMENT,
   `committee_name` varchar(255) NOT NULL,
+  `description` text,
   `district_id` int NOT NULL,
   `contact_number` varchar(20) DEFAULT NULL,
   `email` varchar(191) DEFAULT NULL,
   `address` text,
   `tags` json DEFAULT NULL,
+  `tourist_attractions` json DEFAULT NULL,
+  `latitude` decimal(10,6) DEFAULT NULL,
+  `longitude` decimal(10,6) DEFAULT NULL,
+  `leadership` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
@@ -74,7 +79,7 @@ CREATE TABLE `committees` (
   KEY `district_id` (`district_id`),
   KEY `verification_status_id` (`verification_status_id`),
   CONSTRAINT `committees_ibfk_1` FOREIGN KEY (`district_id`) REFERENCES `districts` (`district_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,7 +88,7 @@ CREATE TABLE `committees` (
 
 LOCK TABLES `committees` WRITE;
 /*!40000 ALTER TABLE `committees` DISABLE KEYS */;
-INSERT INTO `committees` VALUES (1,'East Sikkim Committee',1,'9876543210','east@committee.com','East Sikkim, India','[\"Tourism\", \"Eco\"]',1,1,1),(2,'West Sikkim Committee',2,'9876543211','west@committee.com','West Sikkim, India','[\"Adventure\", \"Cultural\"]',1,2,1);
+INSERT INTO `committees` VALUES (1,'East Sikkim Committee','Martam is a picturesque village nestled in the Eastern part of Sikkim, India. Surrounded by lush forests and terraced paddy fields, it offers a serene retreat for nature enthusiasts.',1,'9876543210','east@committee.com','East Sikkim, India','[\"Tourism\", \"Eco\"]','[{\"name\": \"Fambong La Wildlife Sanctuary\", \"description\": \"Located nearby, this sanctuary is home to a variety of wildlife species and offers trekking opportunities.\"}, {\"name\": \"Rumtek Monastery\", \"description\": \"A significant Buddhist monastery known for its architecture and spiritual ambiance.\"}, {\"name\": \"Trekking Trails\", \"description\": \"The region offers several trekking routes with panoramic views of the Himalayas, including the Kanchenjunga range.\"}]',27.318900,88.622100,'[{\"bio\": \"Serving for over a decade in community development, implementing sustainable tourism practices.\", \"name\": \"Tenzing Sherpa\", \"role\": \"President\"}, {\"bio\": \"Dedicated educator and cultural ambassador, organizing cultural exchange programs and educational workshops.\", \"name\": \"Lhamo Dolma\", \"role\": \"Secretary\"}]',1,1,1),(2,'West Sikkim Committee','Yuksom is a historic town in West Sikkim, known as the first capital of Sikkim. It is the gateway to the famous Dzongri and Goechala treks and holds great cultural and religious significance.',2,'9876543211','west@committee.com','West Sikkim, India','[\"Adventure\", \"Cultural\"]','[{\"name\": \"Fambong La Wildlife Sanctuary\", \"description\": \"Located nearby, this sanctuary is home to a variety of wildlife species and offers trekking opportunities.\"}, {\"name\": \"Rumtek Monastery\", \"description\": \"A significant Buddhist monastery known for its architecture and spiritual ambiance.\"}, {\"name\": \"Trekking Trails\", \"description\": \"The region offers several trekking routes with panoramic views of the Himalayas, including the Kanchenjunga range.\"}]',27.318900,88.622100,'[{\"bio\": \"Serving for over a decade in community development, implementing sustainable tourism practices.\", \"name\": \"Tenzing Sherpa\", \"role\": \"President\"}, {\"bio\": \"Dedicated educator and cultural ambassador, organizing cultural exchange programs and educational workshops.\", \"name\": \"Lhamo Dolma\", \"role\": \"Secretary\"}]',1,2,1),(3,'Martam Village Committee','Martam is a picturesque village nestled in the Eastern part of Sikkim, India. Surrounded by lush forests and terraced paddy fields, it offers a serene retreat for nature enthusiasts.',1,'+91 9876543210','martamcommittee@example.com','Martam, East Sikkim, India','[\"eco-tourism\", \"heritage\", \"trekking\"]','[{\"name\": \"Fambong La Wildlife Sanctuary\", \"description\": \"Located nearby, this sanctuary is home to a variety of wildlife species and offers trekking opportunities.\"}, {\"name\": \"Rumtek Monastery\", \"description\": \"A significant Buddhist monastery known for its architecture and spiritual ambiance.\"}, {\"name\": \"Trekking Trails\", \"description\": \"The region offers several trekking routes with panoramic views of the Himalayas, including the Kanchenjunga range.\"}]',27.318900,88.622100,'[{\"bio\": \"Serving for over a decade in community development, implementing sustainable tourism practices.\", \"name\": \"Tenzing Sherpa\", \"role\": \"President\"}, {\"bio\": \"Dedicated educator and cultural ambassador, organizing cultural exchange programs and educational workshops.\", \"name\": \"Lhamo Dolma\", \"role\": \"Secretary\"}]',1,1,1),(4,'North Sikkim Committee','A beautiful committee representing the diverse culture and tourism of North Sikkim.',2,'9123456789','north@committee.com','Lachen, North Sikkim, India','[\"Adventure\", \"Culture\", \"Eco\"]','[{\"name\": \"Gurudongmar Lake\", \"description\": \"A high-altitude lake offering breathtaking views and spiritual significance.\"}, {\"name\": \"Lachung Valley\", \"description\": \"A scenic valley known for its apple orchards, waterfalls, and snow-capped mountains.\"}]',27.700500,88.693600,'[{\"bio\": \"An experienced leader in rural tourism development.\", \"name\": \"Karma Bhutia\", \"role\": \"President\"}, {\"bio\": \"Cultural enthusiast promoting traditional arts and crafts.\", \"name\": \"Sonam Doma\", \"role\": \"Secretary\"}]',1,2,1),(5,'Green Valley Committee','A community-driven initiative to promote eco-tourism and sustainable living in Green Valley.',3,'+91 6294016508','greenvalley@committee.com','Green Valley, South Sikkim, India','[\"Eco-Tourism\", \"Sustainability\", \"Community\"]','[{\"Name\": \"Green Valley Eco Park\", \"Description\": \"A serene eco-park featuring lush greenery, organic farming, and guided nature walks.\"}, {\"Name\": \"Sunset Viewpoint\", \"Description\": \"A popular spot for breathtaking sunset views over the valley.\"}]',27.512300,88.765400,'[{\"Bio\": \"A dedicated environmentalist working towards sustainable tourism and rural development.\", \"Name\": \"AnkitGurung\", \"Role\": \"President\"}, {\"Bio\": \"A cultural heritage expert focused on preserving local traditions and crafts.\", \"Name\": \"Maya Tamang\", \"Role\": \"Secretary\"}]',1,2,1);
 /*!40000 ALTER TABLE `committees` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -440,18 +445,33 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateCommittee`(
     IN p_committee_name VARCHAR(255),
+    IN p_description TEXT,
     IN p_district_id INT,
     IN p_contact_number VARCHAR(20),
     IN p_email VARCHAR(191),
     IN p_address TEXT,
     IN p_tags JSON,
+    IN p_tourist_attractions JSON,
+    IN p_latitude DECIMAL(10,6),
+    IN p_longitude DECIMAL(10,6),
+    IN p_leadership JSON,
     IN p_isVerifiable TINYINT,
     IN p_verification_status_id INT,
     IN p_is_active TINYINT
 )
 BEGIN
-    INSERT INTO committees (committee_name, district_id, contact_number, email, address, tags, isVerifiable, verification_status_id, is_active)
-    VALUES (p_committee_name, p_district_id, p_contact_number, p_email, p_address, p_tags, p_isVerifiable, p_verification_status_id, p_is_active);
+    INSERT INTO committees (
+        committee_name, description, district_id, 
+        contact_number, email, address, tags, 
+        tourist_attractions, latitude, longitude, 
+        leadership, isVerifiable, verification_status_id, is_active
+    ) 
+    VALUES (
+        p_committee_name, p_description, p_district_id, 
+        p_contact_number, p_email, p_address, p_tags, 
+        p_tourist_attractions, p_latitude, p_longitude, 
+        p_leadership, p_isVerifiable, p_verification_status_id, p_is_active
+    );
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -934,7 +954,30 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllCommittees`()
 BEGIN
-    SELECT * FROM committees;
+    SELECT 
+        c.committee_id,
+        c.committee_name,
+        c.description,
+        
+        c.district_id,
+        d.district_name,
+        
+        c.verification_status_id,
+        mvs.status_type AS verification_status,
+
+        c.contact_number,
+        c.email,
+        c.address,
+        c.tags,
+        c.tourist_attractions,
+        c.latitude,
+        c.longitude,
+        c.leadership,
+        c.isVerifiable,
+        c.is_active
+    FROM committees c
+    LEFT JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON c.verification_status_id = mvs.verification_status_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1092,7 +1135,31 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetCommitteeById`(IN p_committee_id INT)
 BEGIN
-    SELECT * FROM committees WHERE committee_id = p_committee_id;
+    SELECT 
+        c.committee_id,
+        c.committee_name,
+        c.description,
+        
+        c.district_id,
+        d.district_name,
+        
+        c.verification_status_id,
+        mvs.status_type AS verification_status,
+
+        c.contact_number,
+        c.email,
+        c.address,
+        c.tags,
+        c.tourist_attractions,
+        c.latitude,
+        c.longitude,
+        c.leadership,
+        c.isVerifiable,
+        c.is_active
+    FROM committees c
+    LEFT JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON c.verification_status_id = mvs.verification_status_id
+    WHERE c.committee_id = p_committee_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1735,11 +1802,16 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateCommittee`(
     IN p_committee_id INT,
     IN p_committee_name VARCHAR(255),
+    IN p_description TEXT,
     IN p_district_id INT,
     IN p_contact_number VARCHAR(20),
     IN p_email VARCHAR(191),
     IN p_address TEXT,
     IN p_tags JSON,
+    IN p_tourist_attractions JSON,
+    IN p_latitude DECIMAL(10,6),
+    IN p_longitude DECIMAL(10,6),
+    IN p_leadership JSON,
     IN p_isVerifiable TINYINT,
     IN p_verification_status_id INT,
     IN p_is_active TINYINT
@@ -1747,11 +1819,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateCommittee`(
 BEGIN
     UPDATE committees
     SET committee_name = p_committee_name,
+        description = p_description,
         district_id = p_district_id,
         contact_number = p_contact_number,
         email = p_email,
         address = p_address,
         tags = p_tags,
+        tourist_attractions = p_tourist_attractions,
+        latitude = p_latitude,
+        longitude = p_longitude,
+        leadership = p_leadership,
         isVerifiable = p_isVerifiable,
         verification_status_id = p_verification_status_id,
         is_active = p_is_active
@@ -2031,4 +2108,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-04 21:11:06
+-- Dump completed on 2025-03-05 17:49:27

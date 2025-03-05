@@ -6,8 +6,8 @@ namespace DPCV_API.BAL.Services.Committees
     public interface ICommitteeService
     {
         Task<List<VillageDTO>> GetAllVillageNamesAsync();
-        Task<List<CommitteeDTO>> GetAllCommitteesAsync();
-        Task<CommitteeDTO?> GetCommitteeByIdAsync(int committeeId);
+        Task<List<CommitteeResponseDTO>> GetAllCommitteesAsync();
+        Task<CommitteeResponseDTO?> GetCommitteeByIdAsync(int committeeId);
         Task<bool> CreateCommitteeAsync(CommitteeDTO committeeDto, ClaimsPrincipal user);
         Task<bool> UpdateCommitteeAsync(CommitteeDTO committeeDto, ClaimsPrincipal user);
         Task<bool> DeleteCommitteeAsync(int committeeId, ClaimsPrincipal user);

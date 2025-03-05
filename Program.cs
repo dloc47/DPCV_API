@@ -6,22 +6,22 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy("AllowAllOrigins",
-//        policy => policy.AllowAnyOrigin()
-//                        .AllowAnyMethod()
-//                        .AllowAnyHeader());
-//});
-
-// ✅ Add CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngular",
-        policy => policy.WithOrigins("http://localhost:4200")
+    options.AddPolicy("AllowAllOrigins",
+        policy => policy.AllowAnyOrigin()
                         .AllowAnyMethod()
                         .AllowAnyHeader());
 });
+
+// ✅ Add CORS policy
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAngular",
+//        policy => policy.WithOrigins("http://localhost:4200")
+//                        .AllowAnyMethod()
+//                        .AllowAnyHeader());
+//});
 
 // ✅ Read JWT Secret Key from configuration
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing"));
@@ -121,9 +121,9 @@ if (app.Environment.IsDevelopment())
     //});
 }
 
-app.UseCors("AllowAngular");
+//app.UseCors("AllowAngular");
 
-//app.UseCors("AllowAllOrigins");
+app.UseCors("AllowAllOrigins");
 
 app.UseHttpsRedirection();
 

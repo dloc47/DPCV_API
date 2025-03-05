@@ -71,6 +71,11 @@ namespace DPCV_API.Controllers.Website
                 return BadRequest(new { message = "Invalid request data.", errors = ModelState });
             }
 
+            if (id != committeeDto.CommitteeId)
+            {
+                return BadRequest(new { message = "Committee ID mismatch." });
+            }
+
             var result = await _committeeService.UpdateCommitteeAsync(committeeDto, User);
 
             if (!result)
@@ -81,6 +86,7 @@ namespace DPCV_API.Controllers.Website
 
             return Ok(new { message = "Committee updated successfully." });
         }
+
 
         [Authorize]
         [HttpDelete("{id}")]
