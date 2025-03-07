@@ -5,8 +5,8 @@ namespace DPCV_API.BAL.Services.Homestays
 {
     public interface IHomestayService
     {
-        Task<List<HomestayDTO>> GetAllHomestaysAsync();
-        Task<HomestayDTO?> GetHomestayByIdAsync(int homestayId);
+        Task<List<HomestayResponseDTO>> GetAllHomestaysAsync();
+        Task<HomestayResponseDTO?> GetHomestayByIdAsync(int homestayId);
         Task<bool> CreateHomestayAsync(HomestayDTO homestay, ClaimsPrincipal user);
         Task<bool> UpdateHomestayAsync(HomestayDTO homestay, ClaimsPrincipal user);
         Task<bool> DeleteHomestayAsync(int homestayId, ClaimsPrincipal user);

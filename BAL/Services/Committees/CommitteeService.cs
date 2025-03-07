@@ -1,12 +1,9 @@
 ﻿using DPCV_API.Configuration.DbContext;
+using DPCV_API.Helpers;
 using DPCV_API.Models.CommitteeModel;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DPCV_API.BAL.Services.Committees
 {
@@ -19,27 +16,6 @@ namespace DPCV_API.BAL.Services.Committees
         {
             _dataManager = dataManager;
             _logger = logger;
-        }
-
-        private static T DeserializeJsonSafely<T>(object dbValue, string fieldName)
-        {
-            if (dbValue == DBNull.Value || dbValue == null || string.IsNullOrWhiteSpace(dbValue.ToString()))
-            {
-                return Activator.CreateInstance<T>(); // Return an empty object of the required type
-            }
-
-            try
-            {
-                return JsonSerializer.Deserialize<T>(dbValue.ToString()!, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                })!;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deserializing {fieldName}: {ex.Message}");
-                return Activator.CreateInstance<T>(); // Return an empty object on failure
-            }
         }
 
         public async Task<List<VillageDTO>> GetAllVillageNamesAsync()
@@ -92,11 +68,11 @@ namespace DPCV_API.BAL.Services.Committees
                         ContactNumber = row["contact_number"]?.ToString(),
                         Email = row["email"]?.ToString(),
                         Address = row["address"]?.ToString(),
-                        Tags = DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
-                        TouristAttractions = DeserializeJsonSafely<List<TouristAttraction>>(row["tourist_attractions"], "tourist_attractions"),
+                        Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                        TouristAttractions = JsonHelper.DeserializeJsonSafely<List<TouristAttraction>>(row["tourist_attractions"], "tourist_attractions"),
                         Latitude = row["latitude"] != DBNull.Value ? Convert.ToDecimal(row["latitude"]) : null,
                         Longitude = row["longitude"] != DBNull.Value ? Convert.ToDecimal(row["longitude"]) : null,
-                        Leadership = DeserializeJsonSafely<List<LeadershipMember>>(row["leadership"], "leadership"),
+                        Leadership = JsonHelper.DeserializeJsonSafely<List<LeadershipMember>>(row["leadership"], "leadership"),
                         IsVerifiable = Convert.ToInt32(row["isVerifiable"]),
                         VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
                         IsActive = Convert.ToInt32(row["is_active"]),
@@ -141,11 +117,11 @@ namespace DPCV_API.BAL.Services.Committees
                     ContactNumber = row["contact_number"]?.ToString(),
                     Email = row["email"]?.ToString(),
                     Address = row["address"]?.ToString(),
-                    Tags = DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
-                    TouristAttractions = DeserializeJsonSafely<List<TouristAttraction>>(row["tourist_attractions"], "tourist_attractions"),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    TouristAttractions = JsonHelper.DeserializeJsonSafely<List<TouristAttraction>>(row["tourist_attractions"], "tourist_attractions"),
                     Latitude = row["latitude"] != DBNull.Value ? Convert.ToDecimal(row["latitude"]) : null,
                     Longitude = row["longitude"] != DBNull.Value ? Convert.ToDecimal(row["longitude"]) : null,
-                    Leadership = DeserializeJsonSafely<List<LeadershipMember>>(row["leadership"], "leadership"),
+                    Leadership = JsonHelper.DeserializeJsonSafely<List<LeadershipMember>>(row["leadership"], "leadership"),
                     IsVerifiable = Convert.ToInt32(row["isVerifiable"]),
                     VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
                     IsActive = Convert.ToInt32(row["is_active"]),

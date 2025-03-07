@@ -42,7 +42,7 @@ namespace DPCV_API.Models.CommitteeModel
     }
 
 
-
+    // Model for villageName (Drop-down)
     public class VillageDTO
     {
         public int CommitteeId { get; set; }

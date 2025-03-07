@@ -1,7 +1,9 @@
 ﻿using DPCV_API.Configuration.DbContext;
+using DPCV_API.Helpers;
 using DPCV_API.Models.ActivityModel;
 using System.Data;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace DPCV_API.BAL.Services.Activities
 {
@@ -17,25 +19,29 @@ namespace DPCV_API.BAL.Services.Activities
         }
 
         // ✅ Get All Activities
-        // ✅ Get All Activities
-        public async Task<List<ActivityDTO>> GetAllActivitiesAsync()
+        public async Task<List<ActivityResponseDTO>> GetAllActivitiesAsync()
         {
             string procedureName = "GetAllActivities";
             DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
-            List<ActivityDTO> activities = new();
+            List<ActivityResponseDTO> activities = new();
 
             foreach (DataRow row in result.Rows)
             {
-                activities.Add(new ActivityDTO
+                activities.Add(new ActivityResponseDTO
                 {
                     ActivityId = Convert.ToInt32(row["activity_id"]),
                     ActivityName = row["activity_name"].ToString()!,
                     Description = row["description"]?.ToString(),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                     CommitteeId = Convert.ToInt32(row["committee_id"]),
                     HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                     VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                    is_active = Convert.ToInt32(row["is_active"])
+                    is_active = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
                 });
             }
             return activities;
@@ -44,7 +50,7 @@ namespace DPCV_API.BAL.Services.Activities
 
 
         // ✅ Get Activity by ID
-        public async Task<ActivityDTO?> GetActivityByIdAsync(int activityId)
+        public async Task<ActivityResponseDTO?> GetActivityByIdAsync(int activityId)
         {
             string procedureName = "GetActivityById";
             _dataManager.ClearParameters();
@@ -54,16 +60,21 @@ namespace DPCV_API.BAL.Services.Activities
             if (result.Rows.Count == 0) return null;
 
             DataRow row = result.Rows[0];
-            return new ActivityDTO
+            return new ActivityResponseDTO
             {
                 ActivityId = Convert.ToInt32(row["activity_id"]),
                 ActivityName = row["activity_name"].ToString()!,
                 Description = row["description"]?.ToString(),
+                Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                 CommitteeId = Convert.ToInt32(row["committee_id"]),
                 HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
                 IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                 VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                is_active = Convert.ToInt32(row["is_active"])
+                is_active = Convert.ToInt32(row["is_active"]),
+                DistrictId = Convert.ToInt32(row["district_id"]),
+                DistrictName = row["district_name"].ToString()!,
+                Region = row["region"].ToString()!,
+                StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
             };
         }
 
@@ -91,6 +102,7 @@ namespace DPCV_API.BAL.Services.Activities
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_activity_name", activity.ActivityName);
                 _dataManager.AddParameter("@p_description", string.IsNullOrWhiteSpace(activity.Description) ? DBNull.Value : activity.Description);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(activity.Tags));
                 _dataManager.AddParameter("@p_committee_id", activity.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId.HasValue ? activity.HomestayId.Value : DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);
@@ -141,6 +153,7 @@ namespace DPCV_API.BAL.Services.Activities
                 _dataManager.AddParameter("@p_activity_id", activityId);
                 _dataManager.AddParameter("@p_activity_name", string.IsNullOrWhiteSpace(activity.ActivityName) ? DBNull.Value : activity.ActivityName);
                 _dataManager.AddParameter("@p_description", string.IsNullOrWhiteSpace(activity.Description) ? DBNull.Value : activity.Description);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(activity.Tags));
                 _dataManager.AddParameter("@p_committee_id", activity.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", activity.HomestayId ?? (object)DBNull.Value);
                 _dataManager.AddParameter("@p_isVerifiable", activity.IsVerifiable);

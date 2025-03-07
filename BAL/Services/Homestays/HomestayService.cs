@@ -1,11 +1,9 @@
 ﻿using System.Security.Claims;
 using DPCV_API.Configuration.DbContext;
-using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using DPCV_API.Models.HomestayModel;
+using DPCV_API.Helpers;
 
 namespace DPCV_API.BAL.Services.Homestays
 {
@@ -20,10 +18,10 @@ namespace DPCV_API.BAL.Services.Homestays
             _logger = logger;
         }
 
-        public async Task<List<HomestayDTO>> GetAllHomestaysAsync()
+        public async Task<List<HomestayResponseDTO>> GetAllHomestaysAsync()
         {
             string spName = "GetAllHomestays";
-            List<HomestayDTO> homestays = new();
+            List<HomestayResponseDTO> homestays = new();
 
             try
             {
@@ -31,20 +29,28 @@ namespace DPCV_API.BAL.Services.Homestays
 
                 foreach (DataRow row in result.Rows)
                 {
-                    homestays.Add(new HomestayDTO
+                    homestays.Add(new HomestayResponseDTO
                     {
                         HomestayId = Convert.ToInt32(row["homestay_id"]),
                         HomestayName = row["homestay_name"].ToString()!,
                         CommitteeId = Convert.ToInt32(row["committee_id"]),
                         Address = row["address"].ToString()!,
+                        Description = row["description"] != DBNull.Value ? row["description"].ToString()! : string.Empty, // New Field
                         OwnerName = row["owner_name"].ToString()!,
                         OwnerMobile = row["owner_mobile"].ToString()!,
                         TotalRooms = Convert.ToInt32(row["total_rooms"]),
                         RoomTariff = Convert.ToDecimal(row["room_tariff"]),
-                        Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                        Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                        Amenities = JsonHelper.DeserializeJsonSafely<List<string>>(row["amenities"], "amenities"), // New Field
+                        PaymentMethods = row["payment_methods"] != DBNull.Value ? row["payment_methods"].ToString()! : string.Empty, // New Field
+                        SocialMediaLinks = JsonHelper.DeserializeJsonSafely<Dictionary<string, string>>(row["social_media_links"], "social_media_links"), // New Field
                         IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                         VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                        is_active = Convert.ToInt32(row["is_active"])
+                        IsActive = Convert.ToInt32(row["is_active"]),
+                        DistrictId = Convert.ToInt32(row["district_id"]),
+                        DistrictName = row["district_name"].ToString()!,
+                        Region = row["region"].ToString()!,
+                        StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
                     });
                 }
             }
@@ -57,7 +63,7 @@ namespace DPCV_API.BAL.Services.Homestays
             return homestays;
         }
 
-        public async Task<HomestayDTO?> GetHomestayByIdAsync(int homestayId)
+        public async Task<HomestayResponseDTO?> GetHomestayByIdAsync(int homestayId)
         {
             string spName = "GetHomestayById";
 
@@ -74,20 +80,28 @@ namespace DPCV_API.BAL.Services.Homestays
                 }
 
                 DataRow row = result.Rows[0];
-                return new HomestayDTO
+                return new HomestayResponseDTO
                 {
                     HomestayId = Convert.ToInt32(row["homestay_id"]),
                     HomestayName = row["homestay_name"].ToString()!,
                     CommitteeId = Convert.ToInt32(row["committee_id"]),
                     Address = row["address"].ToString()!,
+                    Description = row["description"] != DBNull.Value ? row["description"].ToString()! : string.Empty, // New Field
                     OwnerName = row["owner_name"].ToString()!,
                     OwnerMobile = row["owner_mobile"].ToString()!,
                     TotalRooms = Convert.ToInt32(row["total_rooms"]),
                     RoomTariff = Convert.ToDecimal(row["room_tariff"]),
-                    Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    Amenities = JsonHelper.DeserializeJsonSafely<List<string>>(row["amenities"], "amenities"), // New Field
+                    PaymentMethods = row["payment_methods"] != DBNull.Value ? row["payment_methods"].ToString()! : string.Empty, // New Field
+                    SocialMediaLinks = JsonHelper.DeserializeJsonSafely<Dictionary<string, string>>(row["social_media_links"], "social_media_links"), // New Field
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                     VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                    is_active = Convert.ToInt32(row["is_active"])
+                    IsActive = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
                 };
             }
             catch (Exception ex)
@@ -96,6 +110,7 @@ namespace DPCV_API.BAL.Services.Homestays
                 throw;
             }
         }
+
 
         public async Task<bool> CreateHomestayAsync(HomestayDTO homestay, ClaimsPrincipal user)
         {
@@ -120,14 +135,18 @@ namespace DPCV_API.BAL.Services.Homestays
                 _dataManager.AddParameter("@p_homestay_name", homestay.HomestayName);
                 _dataManager.AddParameter("@p_committee_id", homestay.CommitteeId);
                 _dataManager.AddParameter("@p_address", homestay.Address);
+                _dataManager.AddParameter("@p_description", homestay.Description); // New Field
                 _dataManager.AddParameter("@p_owner_name", homestay.OwnerName);
                 _dataManager.AddParameter("@p_owner_mobile", homestay.OwnerMobile);
                 _dataManager.AddParameter("@p_total_rooms", homestay.TotalRooms);
                 _dataManager.AddParameter("@p_room_tariff", homestay.RoomTariff);
-                _dataManager.AddParameter("@p_tags", homestay.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(homestay.Tags));
+                _dataManager.AddParameter("@p_amenities", JsonSerializer.Serialize(homestay.Amenities)); // New Field
+                _dataManager.AddParameter("@p_payment_methods", homestay.PaymentMethods); // New Field
+                _dataManager.AddParameter("@p_social_media_links", JsonSerializer.Serialize(homestay.SocialMediaLinks)); // New Field
                 _dataManager.AddParameter("@p_isVerifiable", homestay.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
-                _dataManager.AddParameter("@p_is_active", homestay.is_active);
+                _dataManager.AddParameter("@p_is_active", homestay.IsActive);
 
                 return await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
             }
@@ -150,7 +169,7 @@ namespace DPCV_API.BAL.Services.Homestays
 
                 // Fetch existing homestay details
                 _dataManager.ClearParameters();
-                _dataManager.AddParameter("p_homestay_id", homestay.HomestayId);
+                _dataManager.AddParameter("@p_homestay_id", homestay.HomestayId);
                 DataTable dt = await _dataManager.ExecuteQueryAsync("GetHomestayById", CommandType.StoredProcedure);
 
                 if (dt.Rows.Count == 0)
@@ -171,14 +190,18 @@ namespace DPCV_API.BAL.Services.Homestays
                 _dataManager.AddParameter("@p_homestay_name", homestay.HomestayName);
                 _dataManager.AddParameter("@p_committee_id", homestay.CommitteeId);
                 _dataManager.AddParameter("@p_address", homestay.Address);
+                _dataManager.AddParameter("@p_description", homestay.Description); // New Field
                 _dataManager.AddParameter("@p_owner_name", homestay.OwnerName);
                 _dataManager.AddParameter("@p_owner_mobile", homestay.OwnerMobile);
                 _dataManager.AddParameter("@p_total_rooms", homestay.TotalRooms);
                 _dataManager.AddParameter("@p_room_tariff", homestay.RoomTariff);
-                _dataManager.AddParameter("@p_tags", homestay.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(homestay.Tags));
+                _dataManager.AddParameter("@p_amenities", JsonSerializer.Serialize(homestay.Amenities)); // New Field
+                _dataManager.AddParameter("@p_payment_methods", homestay.PaymentMethods); // New Field
+                _dataManager.AddParameter("@p_social_media_links", JsonSerializer.Serialize(homestay.SocialMediaLinks)); // New Field
                 _dataManager.AddParameter("@p_isVerifiable", homestay.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
-                _dataManager.AddParameter("@p_is_active", homestay.is_active);
+                _dataManager.AddParameter("@p_is_active", homestay.IsActive);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
                 if (success)
@@ -196,6 +219,7 @@ namespace DPCV_API.BAL.Services.Homestays
         }
 
 
+
         public async Task<bool> DeleteHomestayAsync(int homestayId, ClaimsPrincipal user)
         {
             try
@@ -208,27 +232,32 @@ namespace DPCV_API.BAL.Services.Homestays
 
                 // Fetch existing homestay details
                 _dataManager.ClearParameters();
-                _dataManager.AddParameter("p_homestay_id", homestayId);
+                _dataManager.AddParameter("@p_homestay_id", homestayId);
                 DataTable dt = await _dataManager.ExecuteQueryAsync("GetHomestayById", CommandType.StoredProcedure);
 
                 if (dt.Rows.Count == 0)
+                {
+                    _logger.LogWarning("Delete attempt failed: Homestay not found (ID: {HomestayId})", homestayId);
                     return false;
+                }
 
                 int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
                 if (roleId == 2 && existingCommitteeId != userCommitteeId)
                 {
-                    _logger.LogWarning("Unauthorized attempt to delete homestay: {HomestayId}", homestayId);
+                    _logger.LogWarning("Unauthorized attempt to delete homestay: {HomestayId} by CommitteeId: {CommitteeId}", homestayId, userCommitteeId);
                     return false;
                 }
 
+                // Soft delete: Update is_active = 0 instead of actual deletion
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_homestay_id", homestayId);
-                bool success = await _dataManager.ExecuteNonQueryAsync("DeleteHomestay", CommandType.StoredProcedure);
+                _dataManager.AddParameter("@p_is_active", false);
+                bool success = await _dataManager.ExecuteNonQueryAsync("ArchiveHomestay", CommandType.StoredProcedure);
 
                 if (success)
-                    _logger.LogInformation("Homestay deleted successfully: {HomestayId}", homestayId);
+                    _logger.LogInformation("Homestay archived successfully: {HomestayId}", homestayId);
                 else
-                    _logger.LogWarning("No homestay record was deleted for: {HomestayId}", homestayId);
+                    _logger.LogWarning("Failed to archive homestay: {HomestayId}", homestayId);
 
                 return success;
             }
@@ -238,6 +267,7 @@ namespace DPCV_API.BAL.Services.Homestays
                 return false;
             }
         }
+
 
 
         public async Task<(bool success, string message)> ArchiveHomestayAsync(int homestayId, ClaimsPrincipal user)
@@ -260,28 +290,49 @@ namespace DPCV_API.BAL.Services.Homestays
                 int roleId = roleClaim != null ? int.Parse(roleClaim.Value) : 0;
                 int? userCommitteeId = committeeClaim != null ? int.Parse(committeeClaim.Value) : null;
 
+                // Fetch existing homestay details
                 _dataManager.ClearParameters();
-                _dataManager.AddParameter("p_homestay_id", homestayId);
+                _dataManager.AddParameter("@p_homestay_id", homestayId);
                 DataTable dt = await _dataManager.ExecuteQueryAsync("GetHomestayById", CommandType.StoredProcedure);
+
                 if (dt.Rows.Count == 0)
+                {
+                    _logger.LogWarning("Toggle status failed: Homestay not found (ID: {HomestayId})", homestayId);
                     return (false, "Homestay does not exist.");
+                }
 
-                if (roleId == 2 && Convert.ToInt32(dt.Rows[0]["committee_id"]) != userCommitteeId)
+                int existingCommitteeId = Convert.ToInt32(dt.Rows[0]["committee_id"]);
+                if (roleId == 2 && existingCommitteeId != userCommitteeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to modify homestay status: {HomestayId} by CommitteeId: {CommitteeId}", homestayId, userCommitteeId);
                     return (false, "You are not authorized to modify this homestay.");
+                }
 
+                // Toggle homestay active status
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_homestay_id", homestayId);
                 _dataManager.AddParameter("@p_is_active", isActive);
 
-                return await _dataManager.ExecuteNonQueryAsync("ToggleHomestayStatus", CommandType.StoredProcedure)
-                    ? (true, isActive ? "Homestay unarchived successfully." : "Homestay archived successfully.")
-                    : (false, "Failed to update homestay status.");
+                bool success = await _dataManager.ExecuteNonQueryAsync("ToggleHomestayStatus", CommandType.StoredProcedure);
+                if (success)
+                {
+                    string statusMessage = isActive ? "unarchived" : "archived";
+                    _logger.LogInformation("Homestay {Status} successfully: {HomestayId}", statusMessage, homestayId);
+                    return (true, $"Homestay {statusMessage} successfully.");
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to update homestay status: {HomestayId}", homestayId);
+                    return (false, "Failed to update homestay status.");
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating homestay status.");
+                _logger.LogError(ex, "Error updating homestay status: {HomestayId}", homestayId);
                 return (false, "An error occurred while updating the homestay status.");
             }
         }
+
+
     }
 }

@@ -28,6 +28,7 @@ CREATE TABLE `activities` (
   `activity_id` int NOT NULL AUTO_INCREMENT,
   `activity_name` varchar(255) NOT NULL,
   `description` text,
+  `tags` json DEFAULT NULL,
   `committee_id` int NOT NULL,
   `homestay_id` int DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
@@ -48,7 +49,7 @@ CREATE TABLE `activities` (
 
 LOCK TABLES `activities` WRITE;
 /*!40000 ALTER TABLE `activities` DISABLE KEYS */;
-INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.',1,NULL,1,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.',2,NULL,0,2,1),(4,'Test Activity','Lorem Ipsum lassan',2,NULL,1,2,1),(13,'Fixed Response body2','string',1,NULL,1,2,1),(14,'Fixed Response body3','string',1,NULL,1,2,1),(15,'Fixed Response body4','string',1,NULL,1,2,1),(16,'Fixed Response body5','string',1,NULL,1,2,1);
+INSERT INTO `activities` VALUES (1,'Trekking','Trekking in the beautiful hills of East Sikkim.','[\"adventure\", \"outdoor\", \"fun\"]',1,NULL,1,1,1),(2,'Cultural Show','A cultural show showcasing local traditions in West Sikkim.','[\"cultural\", \"heritage\", \"historical\"]',2,NULL,0,2,1),(4,'Test Activity','Lorem Ipsum lassan','[\"relaxing\", \"wellness\", \"spa\"]',2,NULL,1,2,1),(13,'Fixed Response body2','string','[\"trekking\", \"nature\", \"wildlife\"]',1,NULL,1,2,1),(14,'Fixed Response body3','string','[\"water sports\", \"beach\", \"snorkeling\"]',1,NULL,1,2,1),(15,'Fixed Response body4','string','[\"food tasting\", \"local cuisine\", \"street food\"]',1,NULL,1,2,1),(16,'Fixed Response body5','string','[\"music\", \"festival\", \"live performance\"]',1,NULL,1,2,1);
 /*!40000 ALTER TABLE `activities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -166,11 +167,15 @@ CREATE TABLE `homestays` (
   `homestay_name` varchar(255) NOT NULL,
   `committee_id` int NOT NULL,
   `address` text NOT NULL,
+  `description` text,
   `owner_name` varchar(255) NOT NULL,
   `owner_mobile` varchar(20) NOT NULL,
   `total_rooms` int NOT NULL,
   `room_tariff` decimal(10,2) NOT NULL,
   `tags` json DEFAULT NULL,
+  `amenities` json DEFAULT NULL,
+  `payment_methods` text,
+  `social_media_links` json DEFAULT NULL,
   `isVerifiable` tinyint DEFAULT '0',
   `verification_status_id` int DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
@@ -187,7 +192,7 @@ CREATE TABLE `homestays` (
 
 LOCK TABLES `homestays` WRITE;
 /*!40000 ALTER TABLE `homestays` DISABLE KEYS */;
-INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]',0,2,1);
+INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India',NULL,'John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]','[\"Free WiFi\", \"Air Conditioning\", \"Swimming Pool\", \"Breakfast Included\", \"Parking Available\"]','Credit Card, Cash, UPI, PayPal','{\"twitter\": \"https://twitter.com/homestay1\", \"youtube\": \"https://youtube.com/channel/example1\", \"facebook\": \"https://facebook.com/homestay1\", \"instagram\": \"https://instagram.com/homestay1\"}',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India',NULL,'Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]','[\"Kitchenette\", \"Pet Friendly\", \"Gym Access\", \"24/7 Security\", \"Airport Shuttle\"]','Debit Card, Net Banking, Cash, Google Pay','{\"twitter\": \"https://twitter.com/homestay2\", \"youtube\": \"https://youtube.com/channel/example2\", \"facebook\": \"https://facebook.com/homestay2\", \"instagram\": \"https://instagram.com/homestay2\"}',0,2,1);
 /*!40000 ALTER TABLE `homestays` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -413,6 +418,7 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateActivity`(
     IN p_activity_name VARCHAR(255),
     IN p_description TEXT,
+    IN p_tags JSON,
     IN p_committee_id INT,
     IN p_homestay_id INT,
     IN p_isVerifiable BOOLEAN,
@@ -421,12 +427,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateActivity`(
 )
 BEGIN
     INSERT INTO activities (
-        activity_name, description, committee_id, homestay_id, isVerifiable, verification_status_id, is_active
+        activity_name, description, tags, committee_id, homestay_id, isVerifiable, verification_status_id, is_active
     ) VALUES (
-        p_activity_name, p_description, p_committee_id, 
-        NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
-        p_isVerifiable, p_verification_status_id, p_is_active
+        p_activity_name, 
+        NULLIF(p_description, ''), -- ✅ Convert empty string to NULL
+        NULLIF(p_tags, '[]'),      -- ✅ Convert empty JSON array to NULL
+        p_committee_id, 
+        NULLIF(p_homestay_id, 0),  -- ✅ Convert 0 to NULL
+        p_isVerifiable, 
+        p_verification_status_id, 
+        p_is_active
     );
+
+    -- ✅ Return the newly inserted Activity ID
+    SELECT LAST_INSERT_ID() AS activity_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -545,11 +559,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateHomestay`(
     IN p_homestay_name VARCHAR(255),
     IN p_committee_id INT,
     IN p_address TEXT,
+    IN p_description TEXT, 
     IN p_owner_name VARCHAR(255),
     IN p_owner_mobile VARCHAR(20),
     IN p_total_rooms INT,
     IN p_room_tariff DECIMAL(10,2),
     IN p_tags JSON,
+    IN p_amenities JSON,
+    IN p_payment_methods VARCHAR(255),
+    IN p_social_media_links JSON,
     IN p_isVerifiable TINYINT,
     IN p_verification_status_id INT,
     IN p_is_active TINYINT
@@ -559,11 +577,15 @@ BEGIN
         homestay_name,
         committee_id,
         address,
+        description, 
         owner_name,
         owner_mobile,
         total_rooms,
         room_tariff,
         tags,
+        amenities,
+        payment_methods,
+        social_media_links,
         isVerifiable,
         verification_status_id,
         is_active
@@ -571,11 +593,15 @@ BEGIN
         p_homestay_name,
         p_committee_id,
         p_address,
+        p_description,
         p_owner_name,
         p_owner_mobile,
         p_total_rooms,
         p_room_tariff,
         p_tags,
+        p_amenities,
+        p_payment_methods,
+        p_social_media_links,
         p_isVerifiable,
         p_verification_status_id,
         p_is_active
@@ -678,10 +704,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `DeleteActivity`(
 BEGIN
     DECLARE rows_affected INT;
 
-    DELETE FROM activities WHERE activity_id = p_activity_id;
-    SET rows_affected = ROW_COUNT();
+    -- Check if the activity exists before deleting
+    IF EXISTS (SELECT 1 FROM activities WHERE activity_id = p_activity_id) THEN
+        DELETE FROM activities WHERE activity_id = p_activity_id;
+        SET rows_affected = ROW_COUNT();
+    ELSE
+        SET rows_affected = 0; -- Activity does not exist
+    END IF;
 
-    -- Return 1 if delete was successful, 0 otherwise
+    -- ✅ Return 1 if delete was successful, 0 otherwise
     SELECT rows_affected AS success;
 END ;;
 DELIMITER ;
@@ -898,16 +929,27 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetActivityById`(IN p_activity_id INT)
 BEGIN
     SELECT 
-        activity_id, 
-        activity_name, 
-        description, 
-        committee_id, 
-        homestay_id, 
-        isVerifiable, 
-        verification_status_id,
-        is_active
-    FROM activities
-    WHERE activity_id = p_activity_id;
+        a.activity_id, 
+        a.activity_name, 
+        a.description,
+        a.tags,  -- Fetching tags (JSON format)
+        a.committee_id,
+        c.district_id,  -- Fetch district_id from committees
+        d.district_name,  -- Fetch district_name from districts
+        d.region,  -- Fetch region from districts
+        a.homestay_id,
+        a.isVerifiable,
+        a.verification_status_id,
+        mvs.status_type,  -- Fetch verification status type from master_verification_status
+        a.is_active
+    FROM activities a
+    -- Join committees table to get district_id
+    JOIN committees c ON a.committee_id = c.committee_id
+    -- Join districts table to get district_name and region
+    JOIN districts d ON c.district_id = d.district_id
+    -- Left join master_verification_status table to get status type
+    LEFT JOIN master_verification_status mvs ON a.verification_status_id = mvs.verification_status_id
+    WHERE a.activity_id = p_activity_id;  -- Filter by activity_id
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -927,15 +969,26 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllActivities`()
 BEGIN
     SELECT 
-        activity_id, 
-        activity_name, 
-        description,
-        committee_id,
-        homestay_id,
-        isVerifiable,
-        verification_status_id,
-        is_active
-    FROM activities;
+        a.activity_id, 
+        a.activity_name, 
+        a.description,
+        a.tags,  -- Fetching tags (JSON format)
+        a.committee_id,
+        c.district_id,  -- Fetch district_id from committees
+        d.district_name,  -- Fetch district_name from districts
+        d.region,  -- Fetch region from districts
+        a.homestay_id,
+        a.isVerifiable,
+        a.verification_status_id,
+        mvs.status_type,  -- Fetch verification status type from master_verification_status
+        a.is_active
+    FROM activities a
+    -- Join committees table to get district_id
+    JOIN committees c ON a.committee_id = c.committee_id
+    -- Join districts table to get district_name and region
+    JOIN districts d ON c.district_id = d.district_id
+    -- Left join master_verification_status table to get status type
+    LEFT JOIN master_verification_status mvs ON a.verification_status_id = mvs.verification_status_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1035,19 +1088,30 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllHomestays`()
 BEGIN
     SELECT 
-        homestay_id,
-        homestay_name,
-        committee_id,
-        address,
-        owner_name,
-        owner_mobile,
-        total_rooms,
-        room_tariff,
-        tags,
-        isVerifiable,
-        verification_status_id,
-        is_active
-    FROM homestays;
+        h.homestay_id,
+        h.homestay_name,
+        h.committee_id,
+        c.district_id,
+        d.district_name,  -- Fetching district_name from districts table
+        d.region,         -- Fetching region from districts table
+        h.address,
+        h.description,
+        h.owner_name,
+        h.owner_mobile,
+        h.total_rooms,
+        h.room_tariff,
+        h.tags,
+        h.amenities,
+        h.payment_methods,
+        h.social_media_links,
+        h.isVerifiable,
+        h.verification_status_id,
+        v.status_type,     -- Fetching status_type from master_verification_status
+        h.is_active
+    FROM homestays h
+    JOIN committees c ON h.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status v ON h.verification_status_id = v.verification_status_id; -- Joining to get status_type
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1255,20 +1319,31 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetHomestayById`(IN p_homestay_id INT)
 BEGIN
     SELECT 
-        homestay_id,
-        homestay_name,
-        committee_id,
-        address,
-        owner_name,
-        owner_mobile,
-        total_rooms,
-        room_tariff,
-        tags,
-        isVerifiable,
-        verification_status_id,
-        is_active
-    FROM homestays
-    WHERE homestay_id = p_homestay_id;
+        h.homestay_id,
+        h.homestay_name,
+        h.committee_id,
+        c.district_id,
+        d.district_name,  -- Fetching district_name from districts table
+        d.region,         -- Fetching region from districts table
+        h.address,
+        h.description,
+        h.owner_name,
+        h.owner_mobile,
+        h.total_rooms,
+        h.room_tariff,
+        h.tags,
+        h.amenities,
+        h.payment_methods,
+        h.social_media_links,
+        h.isVerifiable,
+        h.verification_status_id,
+        v.status_type,     -- Fetching status_type from master_verification_status
+        h.is_active
+    FROM homestays h
+    JOIN committees c ON h.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status v ON h.verification_status_id = v.verification_status_id -- Joining to get status_type
+    WHERE h.homestay_id = p_homestay_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1615,11 +1690,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `ToggleActivityStatus`(
 BEGIN
     DECLARE rows_affected INT;
 
-    UPDATE activities
-    SET is_active = p_is_active
-    WHERE activity_id = p_activity_id;
+    -- Check if the activity exists before updating
+    IF EXISTS (SELECT 1 FROM activities WHERE activity_id = p_activity_id) THEN
+        UPDATE activities
+        SET is_active = p_is_active
+        WHERE activity_id = p_activity_id;
+        
+        SET rows_affected = ROW_COUNT();
+    ELSE
+        SET rows_affected = 0; -- Activity does not exist
+    END IF;
 
-    SET rows_affected = ROW_COUNT();
+    -- ✅ Return 1 if update was successful, 0 otherwise
     SELECT rows_affected AS success;
 END ;;
 DELIMITER ;
@@ -1759,6 +1841,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateActivity`(
     IN p_activity_id INT,
     IN p_activity_name VARCHAR(255),
     IN p_description TEXT,
+    IN p_tags JSON,
     IN p_committee_id INT,
     IN p_homestay_id INT,
     IN p_isVerifiable BOOLEAN,
@@ -1772,8 +1855,9 @@ BEGIN
     SET 
         activity_name = COALESCE(NULLIF(p_activity_name, ''), activity_name),
         description = COALESCE(NULLIF(p_description, ''), description),
+        tags = COALESCE(NULLIF(p_tags, '[]'), tags),  -- ✅ Convert empty JSON array to NULL
         committee_id = p_committee_id,
-        homestay_id = NULLIF(p_homestay_id, 0), -- ✅ Convert 0 to NULL
+        homestay_id = NULLIF(p_homestay_id, 0),  -- ✅ Convert 0 to NULL
         isVerifiable = p_isVerifiable,
         verification_status_id = p_verification_status_id,
         is_active = p_is_active
@@ -1781,7 +1865,7 @@ BEGIN
 
     SET rows_affected = ROW_COUNT();
 
-    -- Return 1 if update was successful, 0 otherwise
+    -- ✅ Return 1 if update was successful, 0 otherwise
     SELECT rows_affected AS success;
 END ;;
 DELIMITER ;
@@ -1921,11 +2005,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateHomestay`(
     IN p_homestay_name VARCHAR(255),
     IN p_committee_id INT,
     IN p_address TEXT,
+    IN p_description TEXT,
     IN p_owner_name VARCHAR(255),
     IN p_owner_mobile VARCHAR(20),
     IN p_total_rooms INT,
     IN p_room_tariff DECIMAL(10,2),
     IN p_tags JSON,
+    IN p_amenities JSON,
+    IN p_payment_methods VARCHAR(255),
+    IN p_social_media_links JSON,
     IN p_isVerifiable TINYINT,
     IN p_verification_status_id INT,
     IN p_is_active TINYINT
@@ -1936,11 +2024,15 @@ BEGIN
         homestay_name = p_homestay_name,
         committee_id = p_committee_id,
         address = p_address,
+        description = p_description,
         owner_name = p_owner_name,
         owner_mobile = p_owner_mobile,
         total_rooms = p_total_rooms,
         room_tariff = p_room_tariff,
         tags = p_tags,
+        amenities = p_amenities,
+        payment_methods = p_payment_methods,
+        social_media_links = p_social_media_links,
         isVerifiable = p_isVerifiable,
         verification_status_id = p_verification_status_id,
         is_active = p_is_active
@@ -2108,4 +2200,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-05 17:49:27
+-- Dump completed on 2025-03-07 17:20:52
