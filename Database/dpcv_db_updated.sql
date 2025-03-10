@@ -1156,7 +1156,7 @@ BEGIN
         
         -- Homestay Details (if applicable)
         p.homestay_id, 
-        h.homestay_name, 
+        IFNULL(h.homestay_name, NULL) AS homestay_name,  -- Ensures NULL when homestay_id is NULL
         
         -- Verification & Status
         p.tags, 
@@ -1439,7 +1439,7 @@ BEGIN
         
         -- Homestay Details (if applicable)
         p.homestay_id, 
-        h.homestay_name, 
+        IFNULL(h.homestay_name, NULL) AS homestay_name,  -- Ensures NULL when homestay_id is NULL
         
         -- Verification & Status
         p.tags, 
@@ -2261,4 +2261,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-10 14:48:26
+-- Dump completed on 2025-03-10 14:59:12

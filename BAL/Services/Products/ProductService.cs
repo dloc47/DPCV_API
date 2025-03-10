@@ -53,7 +53,7 @@ namespace DPCV_API.BAL.Services.Products
 
                         // Homestay Data (if applicable)
                         HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
-                        HomestayName = row["homestay_name"]?.ToString(),
+                        HomestayName = row["homestay_id"] == DBNull.Value ? null : row["homestay_name"]?.ToString(),
 
                         // Verification & Status
                         Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
@@ -111,7 +111,7 @@ namespace DPCV_API.BAL.Services.Products
 
                     // Homestay Data (if applicable)
                     HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
-                    HomestayName = row["homestay_name"]?.ToString(),
+                    HomestayName = row["homestay_id"] == DBNull.Value ? null : row["homestay_name"]?.ToString(),
 
                     // Verification & Status
                     Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
