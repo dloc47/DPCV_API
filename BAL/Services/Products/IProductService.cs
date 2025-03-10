@@ -5,8 +5,8 @@ namespace DPCV_API.BAL.Services.Products
 {
     public interface IProductService
     {
-        Task<List<ProductDTO>> GetAllProductsAsync();
-        Task<ProductDTO?> GetProductByIdAsync(int productId);
+        Task<List<ProductResponseDTO>> GetAllProductsAsync();
+        Task<ProductResponseDTO?> GetProductByIdAsync(int productId);
         Task<bool> CreateProductAsync(ProductDTO product, ClaimsPrincipal user);
         Task<bool> UpdateProductAsync(ProductDTO product, ClaimsPrincipal user);
         Task<bool> DeleteProductAsync(int productId, ClaimsPrincipal user);

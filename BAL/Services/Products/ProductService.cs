@@ -1,4 +1,5 @@
 ﻿using DPCV_API.Configuration.DbContext;
+using DPCV_API.Helpers;
 using DPCV_API.Models.ProductModel;
 using Microsoft.Extensions.Logging;
 using System;
@@ -22,10 +23,10 @@ namespace DPCV_API.BAL.Services.Products
         }
 
         // ✅ Get All Products
-        public async Task<List<ProductDTO>> GetAllProductsAsync()
+        public async Task<List<ProductResponseDTO>> GetAllProductsAsync()
         {
             string spName = "GetAllProducts";
-            List<ProductDTO> products = new();
+            List<ProductResponseDTO> products = new();
 
             try
             {
@@ -33,18 +34,33 @@ namespace DPCV_API.BAL.Services.Products
 
                 foreach (DataRow row in result.Rows)
                 {
-                    products.Add(new ProductDTO
+                    products.Add(new ProductResponseDTO
                     {
+                        // Core Product Data
                         ProductId = Convert.ToInt32(row["product_id"]),
                         ProductName = row["product_name"].ToString()!,
                         Description = row["description"]?.ToString(),
+                        MetricUnit = row["metric_unit"].ToString()!,
+                        MetricValue = row["metric_value"] != DBNull.Value ? Convert.ToDecimal(row["metric_value"]) : null,
                         Price = Convert.ToDecimal(row["price"]),
+
+                        // Committee & District Data
                         CommitteeId = Convert.ToInt32(row["committee_id"]),
+                        CommitteeName = row["committee_name"].ToString()!,
+                        DistrictId = Convert.ToInt32(row["district_id"]),
+                        DistrictName = row["district_name"].ToString()!,
+                        Region = row["region"].ToString()!,
+
+                        // Homestay Data (if applicable)
                         HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
-                        Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                        HomestayName = row["homestay_name"]?.ToString(),
+
+                        // Verification & Status
+                        Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                         IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                         VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                        is_active = Convert.ToInt32(row["is_active"])
+                        StatusType = row["status_type"]?.ToString(), // Fetching status type from master_verification_status
+                        IsActive = Convert.ToBoolean(row["is_active"])
                     });
                 }
             }
@@ -57,8 +73,9 @@ namespace DPCV_API.BAL.Services.Products
             return products;
         }
 
+
         // ✅ Get Product by ID
-        public async Task<ProductDTO?> GetProductByIdAsync(int productId)
+        public async Task<ProductResponseDTO?> GetProductByIdAsync(int productId)
         {
             string spName = "GetProductById";
 
@@ -75,18 +92,33 @@ namespace DPCV_API.BAL.Services.Products
                 }
 
                 DataRow row = result.Rows[0];
-                return new ProductDTO
+                return new ProductResponseDTO
                 {
+                    // Core Product Data
                     ProductId = Convert.ToInt32(row["product_id"]),
                     ProductName = row["product_name"].ToString()!,
                     Description = row["description"]?.ToString(),
+                    MetricUnit = row["metric_unit"].ToString()!,
+                    MetricValue = row["metric_value"] != DBNull.Value ? Convert.ToDecimal(row["metric_value"]) : null,
                     Price = Convert.ToDecimal(row["price"]),
+
+                    // Committee & District Data
                     CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    CommitteeName = row["committee_name"].ToString()!,
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+
+                    // Homestay Data (if applicable)
                     HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
-                    Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                    HomestayName = row["homestay_name"]?.ToString(),
+
+                    // Verification & Status
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                     VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                    is_active = Convert.ToInt32(row["is_active"])
+                    StatusType = row["status_type"]?.ToString(), // Fetching status type from master_verification_status
+                    IsActive = Convert.ToBoolean(row["is_active"])
                 };
             }
             catch (Exception ex)
@@ -95,6 +127,7 @@ namespace DPCV_API.BAL.Services.Products
                 throw;
             }
         }
+
 
         // ✅ Create Product
         public async Task<bool> CreateProductAsync(ProductDTO product, ClaimsPrincipal user)
@@ -119,13 +152,15 @@ namespace DPCV_API.BAL.Services.Products
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_product_name", product.ProductName);
                 _dataManager.AddParameter("@p_description", product.Description ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_metric_unit", product.MetricUnit);
+                _dataManager.AddParameter("@p_metric_value", product.MetricValue ?? (object)DBNull.Value);
                 _dataManager.AddParameter("@p_price", product.Price);
                 _dataManager.AddParameter("@p_committee_id", product.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", product.HomestayId ?? (object)DBNull.Value);
-                _dataManager.AddParameter("@p_tags", product.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(product.Tags));
                 _dataManager.AddParameter("@p_isVerifiable", product.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
-                _dataManager.AddParameter("@p_is_active", product.is_active);
+                _dataManager.AddParameter("@p_is_active", product.IsActive);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync(procedureName, CommandType.StoredProcedure);
                 if (success)
@@ -174,13 +209,15 @@ namespace DPCV_API.BAL.Services.Products
                 _dataManager.AddParameter("@p_product_id", product.ProductId);
                 _dataManager.AddParameter("@p_product_name", product.ProductName);
                 _dataManager.AddParameter("@p_description", product.Description ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_metric_unit", product.MetricUnit);
+                _dataManager.AddParameter("@p_metric_value", product.MetricValue ?? (object)DBNull.Value);
                 _dataManager.AddParameter("@p_price", product.Price);
                 _dataManager.AddParameter("@p_committee_id", product.CommitteeId);
                 _dataManager.AddParameter("@p_homestay_id", product.HomestayId ?? (object)DBNull.Value);
-                _dataManager.AddParameter("@p_tags", product.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+                _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(product.Tags));
                 _dataManager.AddParameter("@p_isVerifiable", product.IsVerifiable);
                 _dataManager.AddParameter("@p_verification_status_id", verificationStatus);
-                _dataManager.AddParameter("@p_is_active", product.is_active);
+                _dataManager.AddParameter("@p_is_active", product.IsActive);
 
                 bool success = await _dataManager.ExecuteNonQueryAsync("UpdateProduct", CommandType.StoredProcedure);
                 if (success)

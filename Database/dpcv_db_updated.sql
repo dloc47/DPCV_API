@@ -192,7 +192,7 @@ CREATE TABLE `homestays` (
 
 LOCK TABLES `homestays` WRITE;
 /*!40000 ALTER TABLE `homestays` DISABLE KEYS */;
-INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India',NULL,'John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]','[\"Free WiFi\", \"Air Conditioning\", \"Swimming Pool\", \"Breakfast Included\", \"Parking Available\"]','Credit Card, Cash, UPI, PayPal','{\"twitter\": \"https://twitter.com/homestay1\", \"youtube\": \"https://youtube.com/channel/example1\", \"facebook\": \"https://facebook.com/homestay1\", \"instagram\": \"https://instagram.com/homestay1\"}',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India',NULL,'Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]','[\"Kitchenette\", \"Pet Friendly\", \"Gym Access\", \"24/7 Security\", \"Airport Shuttle\"]','Debit Card, Net Banking, Cash, Google Pay','{\"twitter\": \"https://twitter.com/homestay2\", \"youtube\": \"https://youtube.com/channel/example2\", \"facebook\": \"https://facebook.com/homestay2\", \"instagram\": \"https://instagram.com/homestay2\"}',0,2,1);
+INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India','Nestled in the serene hills, Mountain View Homestay offers breathtaking views of lush green valleys. With cozy rooms, warm hospitality, and easy access to trekking trails, it\'s an ideal retreat for nature lovers.','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]','[\"Free WiFi\", \"Air Conditioning\", \"Swimming Pool\", \"Breakfast Included\", \"Parking Available\"]','Credit Card, Cash, UPI, PayPal','{\"twitter\": \"https://twitter.com/homestay1\", \"youtube\": \"https://youtube.com/channel/example1\", \"facebook\": \"https://facebook.com/homestay1\", \"instagram\": \"https://instagram.com/homestay1\"}',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India','Located right by the riverside, Riverfront Homestay provides a peaceful escape with the soothing sound of flowing water. Guests can enjoy spacious rooms, homemade delicacies, and activities like fishing and kayaking.','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]','[\"Kitchenette\", \"Pet Friendly\", \"Gym Access\", \"24/7 Security\", \"Airport Shuttle\"]','Debit Card, Net Banking, Cash, Google Pay','{\"twitter\": \"https://twitter.com/homestay2\", \"youtube\": \"https://youtube.com/channel/example2\", \"facebook\": \"https://facebook.com/homestay2\", \"instagram\": \"https://instagram.com/homestay2\"}',0,2,1);
 /*!40000 ALTER TABLE `homestays` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -263,6 +263,8 @@ CREATE TABLE `products` (
   `product_id` int NOT NULL AUTO_INCREMENT,
   `product_name` varchar(255) NOT NULL,
   `description` text,
+  `metric_unit` varchar(50) NOT NULL DEFAULT 'Per Unit',
+  `metric_value` decimal(10,2) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
   `committee_id` int NOT NULL,
   `homestay_id` int DEFAULT NULL,
@@ -285,7 +287,7 @@ CREATE TABLE `products` (
 
 LOCK TABLES `products` WRITE;
 /*!40000 ALTER TABLE `products` DISABLE KEYS */;
-INSERT INTO `products` VALUES (1,'Sikkim Organic Tea','Organic tea grown in East Sikkim.',500.00,1,NULL,'[\"Organic\", \"Tea\"]',1,1,1),(2,'Handmade Woolen Shawl','Woolen shawl handmade by local artisans of West Sikkim.',1500.00,2,NULL,'[\"Handmade\", \"Woolen\"]',0,2,1);
+INSERT INTO `products` VALUES (1,'Sikkim Organic Tea','Organic tea grown in East Sikkim.','Kilogram',0.50,500.00,1,NULL,'[\"Organic\", \"Tea\"]',1,1,1),(2,'Handmade Woolen Shawl','Woolen shawl handmade by local artisans of West Sikkim.','Piece',1.00,1500.00,2,NULL,'[\"Handmade\", \"Woolen\"]',0,2,1);
 /*!40000 ALTER TABLE `products` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -625,6 +627,8 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateProduct`(
     IN p_product_name VARCHAR(255),
     IN p_description TEXT,
+    IN p_metric_unit VARCHAR(50),
+    IN p_metric_value DECIMAL(10,2),
     IN p_price DECIMAL(10,2),
     IN p_committee_id INT,
     IN p_homestay_id INT,
@@ -637,6 +641,8 @@ BEGIN
     INSERT INTO products (
         product_name, 
         description, 
+        metric_unit, 
+        metric_value, 
         price, 
         committee_id, 
         homestay_id, 
@@ -647,6 +653,8 @@ BEGIN
     ) VALUES (
         p_product_name, 
         p_description, 
+        IFNULL(p_metric_unit, 'Per Unit'), -- Default value if NULL
+        IFNULL(p_metric_value, NULL), 
         p_price, 
         p_committee_id, 
         IFNULL(p_homestay_id, NULL), 
@@ -1131,17 +1139,41 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllProducts`()
 BEGIN
     SELECT 
-        product_id, 
-        product_name, 
-        description, 
-        price, 
-        committee_id, 
-        homestay_id, 
-        tags, 
-        isVerifiable, 
-        verification_status_id, 
-        is_active 
-    FROM products;
+        -- Product Details
+        p.product_id, 
+        p.product_name, 
+        p.description, 
+        p.metric_unit,
+        p.metric_value,
+        p.price, 
+        
+        -- Committee & District Details
+        p.committee_id, 
+        c.committee_name, 
+        c.district_id, 
+        d.district_name, 
+        d.region, 
+        
+        -- Homestay Details (if applicable)
+        p.homestay_id, 
+        h.homestay_name, 
+        
+        -- Verification & Status
+        p.tags, 
+        p.isVerifiable, 
+        p.verification_status_id, 
+        v.status_type,  -- Fetching status_type from master_verification_status
+        p.is_active
+        
+    FROM products p
+    -- Joining Committees to fetch committee_name & district_id
+    JOIN committees c ON p.committee_id = c.committee_id
+    -- Joining Districts to fetch district_name & region
+    JOIN districts d ON c.district_id = d.district_id
+    -- Joining Homestays to fetch homestay_name (if applicable)
+    LEFT JOIN homestays h ON p.homestay_id = h.homestay_id
+    -- Joining Verification Status to fetch status_type
+    LEFT JOIN master_verification_status v ON p.verification_status_id = v.verification_status_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1390,18 +1422,43 @@ DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetProductById`(IN p_product_id INT)
 BEGIN
     SELECT 
-        product_id, 
-        product_name, 
-        description, 
-        price, 
-        committee_id, 
-        homestay_id, 
-        tags, 
-        isVerifiable, 
-        verification_status_id, 
-        is_active 
-    FROM products
-    WHERE product_id = p_product_id;
+        -- Product Details
+        p.product_id, 
+        p.product_name, 
+        p.description, 
+        p.metric_unit,
+        p.metric_value,
+        p.price, 
+        
+        -- Committee & District Details
+        p.committee_id, 
+        c.committee_name, 
+        c.district_id, 
+        d.district_name, 
+        d.region, 
+        
+        -- Homestay Details (if applicable)
+        p.homestay_id, 
+        h.homestay_name, 
+        
+        -- Verification & Status
+        p.tags, 
+        p.isVerifiable, 
+        p.verification_status_id, 
+        v.status_type,  -- Fetching status_type from master_verification_status
+        p.is_active
+        
+    FROM products p
+    -- Joining Committees to fetch committee_name & district_id
+    JOIN committees c ON p.committee_id = c.committee_id
+    -- Joining Districts to fetch district_name & region
+    JOIN districts d ON c.district_id = d.district_id
+    -- Joining Homestays to fetch homestay_name (if applicable)
+    LEFT JOIN homestays h ON p.homestay_id = h.homestay_id
+    -- Joining Verification Status to fetch status_type
+    LEFT JOIN master_verification_status v ON p.verification_status_id = v.verification_status_id
+    -- Filtering by the provided product ID
+    WHERE p.product_id = p_product_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2081,6 +2138,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateProduct`(
     IN p_product_id INT,
     IN p_product_name VARCHAR(255),
     IN p_description TEXT,
+    IN p_metric_unit VARCHAR(50),
+    IN p_metric_value DECIMAL(10,2),
     IN p_price DECIMAL(10,2),
     IN p_committee_id INT,
     IN p_homestay_id INT,
@@ -2094,6 +2153,8 @@ BEGIN
     SET 
         product_name = p_product_name,
         description = p_description,
+        metric_unit = IFNULL(p_metric_unit, 'Per Unit'), -- Default value if NULL
+        metric_value = IFNULL(p_metric_value, NULL),
         price = p_price,
         committee_id = p_committee_id,
         homestay_id = IFNULL(p_homestay_id, NULL),
@@ -2200,4 +2261,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-07 17:20:52
+-- Dump completed on 2025-03-10 14:48:26
