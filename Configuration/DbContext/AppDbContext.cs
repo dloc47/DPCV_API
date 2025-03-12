@@ -7,6 +7,7 @@ namespace DPCV_API.Configuration.DbContext
     {
         private readonly MySqlConnection _connection;
         private MySqlCommand _command;
+        private MySqlTransaction? _transaction;
         private bool _disposed = false;
 
         public AppDbContext()
@@ -23,10 +24,48 @@ namespace DPCV_API.Configuration.DbContext
             _command = _connection.CreateCommand();
         }
 
+        public void BeginTransaction()
+        {
+            if (_connection.State != ConnectionState.Open)
+                _connection.Open();
+
+            if (_transaction == null) // Prevent multiple transaction instances
+            {
+                _transaction = _connection.BeginTransaction();
+                _command.Transaction = _transaction;
+            }
+        }
+
+
+        public void CommitTransaction()
+        {
+            _transaction?.Commit();
+            _transaction = null; // Reset transaction
+        }
+
+        public void RollbackTransaction()
+        {
+            try
+            {
+                if (_transaction != null)
+                {
+                    _transaction.Rollback();
+                    _transaction.Dispose();
+                    _transaction = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         public void CloseContext()
         {
-            if (_command != null)
-                _command.Dispose();
+            _transaction?.Dispose();
+            _command?.Dispose();
 
             if (_connection.State == ConnectionState.Open)
                 _connection.Close();

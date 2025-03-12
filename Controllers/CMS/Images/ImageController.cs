@@ -60,16 +60,49 @@ namespace DPCV_API.Controllers.CMS.Images
         }
 
 
+        [HttpGet("{imageId}")]
+        public async Task<IActionResult> GetImageById(int imageId)
+        {
+            try
+            {
+                var image = await _imageService.GetImageByIdAsync(imageId);
+
+                if (image == null)
+                {
+                    return NotFound(new { message = "Image not found." });
+                }
+
+                return Ok(image);
+            }
+            catch
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving the image." });
+            }
+        }
+
+
         [Authorize]
         [HttpPut("{imageId}")]
-        public async Task<IActionResult> UpdateImage(int imageId, IFormFile? newFile, string? newName)
+        public async Task<IActionResult> UpdateImage(int imageId, IFormFile? newFile)
         {
+            if (newFile == null || newFile.Length == 0)
+            {
+                return BadRequest(new { message = "Please provide a valid image file." });
+            }
+
             var user = HttpContext.User;
-            var success = await _imageService.UpdateImageAsync(imageId, newFile, newName, user);
+            var (success, message) = await _imageService.UpdateImageAsync(imageId, newFile, user);
+
             if (success)
-                return NoContent();
-            return BadRequest();
+            {
+                return Ok(new { message });
+            }
+            else
+            {
+                return NotFound(new { message });
+            }
         }
+
 
         [Authorize]
         [HttpDelete("{imageId}")]

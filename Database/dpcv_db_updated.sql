@@ -224,7 +224,7 @@ CREATE TABLE `images` (
   KEY `committee_id` (`committee_id`),
   KEY `uploaded_by` (`uploaded_by`),
   CONSTRAINT `fk_images_committees` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -233,7 +233,7 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (5,'/Uploads/22605518-d9af-42a7-90ab-99b0f2636469.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','22605518-d9af-42a7-90ab-99b0f2636469.jpeg',3792,'image/jpeg','Homestay',1,NULL,3,1,'Active','2025-03-12 09:51:45','2025-03-12 09:55:33'),(6,'/Uploads/305984ca-6354-441d-84db-1fd2f040734b.jpeg','WhatsApp Image 2025-02-22 at 10.18.24 AM.jpeg','305984ca-6354-441d-84db-1fd2f040734b.jpeg',87474,'image/jpeg','Committee',2,NULL,3,0,'Active','2025-03-12 09:54:13','2025-03-12 09:54:13');
+INSERT INTO `images` VALUES (7,'/Uploads/2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg',3792,'image/jpeg','Homestay',2,NULL,3,1,'Active','2025-03-12 11:04:34','2025-03-12 11:05:04'),(8,'/Uploads/353e3833-9ad3-4741-87e3-cba3a77bcb4a.jpg','adventure-cold-daylight-291732.jpg','353e3833-9ad3-4741-87e3-cba3a77bcb4a.jpg',648228,'image/jpeg','Committee',1,NULL,3,0,'Active','2025-03-12 11:05:18','2025-03-12 11:05:18');
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1426,6 +1426,41 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetImageById` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetImageById`(IN p_image_id INT)
+BEGIN
+    SELECT 
+        i.image_id,
+        i.image_url,
+        i.original_image_name,
+        i.image_name,
+        i.file_size,
+        i.mime_type,
+        i.entity_type,
+        i.entity_id,
+        i.committee_id,
+        i.uploaded_by,
+        i.is_profile_image,
+        i.status,
+        i.created_at,
+        i.updated_at
+    FROM images i
+    WHERE i.image_id = p_image_id;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `GetImagesByEntity` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -2215,12 +2250,30 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateImage`(
     IN p_image_id INT,
-    IN p_new_name VARCHAR(255)
+    IN p_new_image_url VARCHAR(255),
+    IN p_original_image_name VARCHAR(255),
+    IN p_image_name VARCHAR(255),
+    IN p_file_size BIGINT,
+    IN p_mime_type VARCHAR(100),
+    IN p_is_profile_image TINYINT(1) -- Use TINYINT(1) instead of BOOLEAN
 )
 BEGIN
-    UPDATE images
-    SET image_name = p_new_name
-    WHERE image_id = p_image_id;
+    -- Check if image exists before updating
+    IF EXISTS (SELECT 1 FROM images WHERE image_id = p_image_id) THEN
+        UPDATE images
+        SET 
+            image_url = IFNULL(p_new_image_url, image_url),
+            original_image_name = IFNULL(p_original_image_name, original_image_name),
+            image_name = IFNULL(p_image_name, image_name),
+            file_size = IFNULL(p_file_size, file_size),
+            mime_type = IFNULL(p_mime_type, mime_type),
+            is_profile_image = p_is_profile_image, -- No need for IFNULL, it's either 0 or 1
+            updated_at = CURRENT_TIMESTAMP
+        WHERE image_id = p_image_id;
+    ELSE
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Image ID not found';
+    END IF;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2364,4 +2417,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-12 15:26:24
+-- Dump completed on 2025-03-12 16:44:17
