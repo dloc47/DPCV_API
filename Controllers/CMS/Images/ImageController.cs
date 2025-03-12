@@ -1,8 +1,8 @@
 ﻿using DPCV_API.BAL.Services.Images;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using DPCV_API.Models.ImageModel;
+using Microsoft.AspNetCore.Authorization;
+using DPCV_API.Models.ImageModel.DPCV_API.Models.ImageModel;
 
 namespace DPCV_API.Controllers.CMS.Images
 {
@@ -17,32 +17,50 @@ namespace DPCV_API.Controllers.CMS.Images
             _imageService = imageService;
         }
 
+        [Authorize]
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadMedia(IFormFile document, string entityType, int entityId)
+        public async Task<IActionResult> UploadMedia([FromForm] UploadMediaRequest request)
         {
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Invalid file. Please upload a valid image." });
+            }
+
             var user = HttpContext.User;
-            var result = await _imageService.UploadMediaService(document, entityType, entityId, user);
+            var result = await _imageService.UploadMediaService(request.File, request.EntityType, request.EntityId, user);
+
             if (result.Success)
-                return Ok(result.Message);
-            return BadRequest(result.Message);
+            {
+                return Ok(new { success = true, message = result.Message, imageUrl = result.FilePath });
+            }
+
+            return BadRequest(new { success = false, message = result.Message });
         }
 
         [HttpGet("{entityType}/{entityId}/images")]
-        public async Task<IActionResult> GetImagesByEntity(string entityType, int entityId)
+        public async Task<IActionResult> GetImagesByEntity(EntityTypeEnum entityType, int entityId)
         {
             var images = await _imageService.GetImagesByEntityAsync(entityType, entityId);
+
+            if (images == null || images.Count == 0)
+                return NotFound(new { message = "No images found for the specified entity." });
+
             return Ok(images);
         }
 
         [HttpGet("{entityType}/{entityId}/profile-image")]
-        public async Task<IActionResult> GetProfileImageByEntity(string entityType, int entityId)
+        public async Task<IActionResult> GetProfileImageByEntity(EntityTypeEnum entityType, int entityId)
         {
             var image = await _imageService.GetProfileImageByEntityAsync(entityType, entityId);
-            if (image != null)
-                return Ok(image);
-            return NotFound();
+
+            if (image == null)
+                return NotFound(new { message = "No profile image found for the specified entity." });
+
+            return Ok(image);
         }
 
+
+        [Authorize]
         [HttpPut("{imageId}")]
         public async Task<IActionResult> UpdateImage(int imageId, IFormFile? newFile, string? newName)
         {
@@ -53,6 +71,7 @@ namespace DPCV_API.Controllers.CMS.Images
             return BadRequest();
         }
 
+        [Authorize]
         [HttpDelete("{imageId}")]
         public async Task<IActionResult> DeleteImage(int imageId)
         {
@@ -63,6 +82,7 @@ namespace DPCV_API.Controllers.CMS.Images
             return BadRequest();
         }
 
+        [Authorize]
         [HttpPost("{imageId}/set-profile")]
         public async Task<IActionResult> SetProfileImage(int imageId)
         {

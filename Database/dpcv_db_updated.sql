@@ -192,7 +192,7 @@ CREATE TABLE `homestays` (
 
 LOCK TABLES `homestays` WRITE;
 /*!40000 ALTER TABLE `homestays` DISABLE KEYS */;
-INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',1,'East Sikkim, India','Nestled in the serene hills, Mountain View Homestay offers breathtaking views of lush green valleys. With cozy rooms, warm hospitality, and easy access to trekking trails, it\'s an ideal retreat for nature lovers.','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]','[\"Free WiFi\", \"Air Conditioning\", \"Swimming Pool\", \"Breakfast Included\", \"Parking Available\"]','Credit Card, Cash, UPI, PayPal','{\"twitter\": \"https://twitter.com/homestay1\", \"youtube\": \"https://youtube.com/channel/example1\", \"facebook\": \"https://facebook.com/homestay1\", \"instagram\": \"https://instagram.com/homestay1\"}',1,1,1),(2,'Riverfront Homestay',2,'West Sikkim, India','Located right by the riverside, Riverfront Homestay provides a peaceful escape with the soothing sound of flowing water. Guests can enjoy spacious rooms, homemade delicacies, and activities like fishing and kayaking.','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]','[\"Kitchenette\", \"Pet Friendly\", \"Gym Access\", \"24/7 Security\", \"Airport Shuttle\"]','Debit Card, Net Banking, Cash, Google Pay','{\"twitter\": \"https://twitter.com/homestay2\", \"youtube\": \"https://youtube.com/channel/example2\", \"facebook\": \"https://facebook.com/homestay2\", \"instagram\": \"https://instagram.com/homestay2\"}',0,2,1);
+INSERT INTO `homestays` VALUES (1,'Mountain View Homestay',2,'East Sikkim, India','Nestled in the serene hills, Mountain View Homestay offers breathtaking views of lush green valleys. With cozy rooms, warm hospitality, and easy access to trekking trails, it\'s an ideal retreat for nature lovers.','John Doe','9876543201',5,1500.00,'[\"Mountain\", \"Eco-Friendly\"]','[\"Free WiFi\", \"Air Conditioning\", \"Swimming Pool\", \"Breakfast Included\", \"Parking Available\"]','Credit Card, Cash, UPI, PayPal','{\"twitter\": \"https://twitter.com/homestay1\", \"youtube\": \"https://youtube.com/channel/example1\", \"facebook\": \"https://facebook.com/homestay1\", \"instagram\": \"https://instagram.com/homestay1\"}',1,1,1),(2,'Riverfront Homestay',1,'West Sikkim, India','Located right by the riverside, Riverfront Homestay provides a peaceful escape with the soothing sound of flowing water. Guests can enjoy spacious rooms, homemade delicacies, and activities like fishing and kayaking.','Jane Smith','9876543202',8,2000.00,'[\"River\", \"Luxury\"]','[\"Kitchenette\", \"Pet Friendly\", \"Gym Access\", \"24/7 Security\", \"Airport Shuttle\"]','Debit Card, Net Banking, Cash, Google Pay','{\"twitter\": \"https://twitter.com/homestay2\", \"youtube\": \"https://youtube.com/channel/example2\", \"facebook\": \"https://facebook.com/homestay2\", \"instagram\": \"https://instagram.com/homestay2\"}',0,2,1);
 /*!40000 ALTER TABLE `homestays` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -206,17 +206,25 @@ DROP TABLE IF EXISTS `images`;
 CREATE TABLE `images` (
   `image_id` int NOT NULL AUTO_INCREMENT,
   `image_url` varchar(255) NOT NULL,
+  `original_image_name` varchar(255) DEFAULT NULL,
   `image_name` varchar(255) DEFAULT NULL,
+  `file_size` bigint DEFAULT NULL,
+  `mime_type` varchar(100) DEFAULT NULL,
   `entity_type` enum('Admin','Committee','Homestay','Activity','Event','Product') NOT NULL,
   `entity_id` int NOT NULL,
-  `committee_id` int NOT NULL,
+  `committee_id` int DEFAULT NULL,
+  `uploaded_by` int DEFAULT NULL,
   `is_profile_image` tinyint(1) DEFAULT '0',
+  `status` enum('Active','Archived','Deleted') DEFAULT 'Active',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`image_id`),
   KEY `entity_type` (`entity_type`),
   KEY `entity_id` (`entity_id`),
   KEY `committee_id` (`committee_id`),
+  KEY `uploaded_by` (`uploaded_by`),
   CONSTRAINT `fk_images_committees` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -225,6 +233,7 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
+INSERT INTO `images` VALUES (5,'/Uploads/22605518-d9af-42a7-90ab-99b0f2636469.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','22605518-d9af-42a7-90ab-99b0f2636469.jpeg',3792,'image/jpeg','Homestay',1,NULL,3,1,'Active','2025-03-12 09:51:45','2025-03-12 09:55:33'),(6,'/Uploads/305984ca-6354-441d-84db-1fd2f040734b.jpeg','WhatsApp Image 2025-02-22 at 10.18.24 AM.jpeg','305984ca-6354-441d-84db-1fd2f040734b.jpeg',87474,'image/jpeg','Committee',2,NULL,3,0,'Active','2025-03-12 09:54:13','2025-03-12 09:54:13');
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1281,6 +1290,41 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetEntityCommitteeIdForImage` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetEntityCommitteeIdForImage`(
+    IN p_entity_id INT,
+    IN p_entity_type ENUM('Committee','Homestay','Activity','Event','Product')
+)
+BEGIN
+    CASE p_entity_type
+		WHEN 'Committee' THEN 
+		SELECT committee_id FROM committees WHERE committee_id = p_entity_id;
+        WHEN 'Homestay' THEN 
+            SELECT committee_id FROM homestays WHERE homestay_id = p_entity_id;
+        WHEN 'Activity' THEN 
+            SELECT committee_id FROM activities WHERE activity_id = p_entity_id;
+        WHEN 'Event' THEN 
+            SELECT committee_id FROM events WHERE event_id = p_entity_id;
+        WHEN 'Product' THEN 
+            SELECT committee_id FROM products WHERE product_id = p_entity_id;
+        ELSE 
+            SELECT NULL;
+    END CASE;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `GetEntityCounts` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1394,15 +1438,28 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetImagesByEntity`(
     IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
-    IN p_entity_id INT,
-    IN p_committee_id INT
+    IN p_entity_id INT
 )
 BEGIN
-    SELECT image_url 
+    SELECT 
+        image_id,
+        image_url,
+        original_image_name,
+        image_name,
+        file_size,
+        mime_type,
+        entity_type, 
+        entity_id,
+        committee_id,
+        uploaded_by,
+        is_profile_image,
+        status,
+        created_at,
+        updated_at
     FROM images 
-    WHERE entity_type = p_entity_type 
+    WHERE LOWER(entity_type) = LOWER(p_entity_type) 
       AND entity_id = p_entity_id
-      AND committee_id = p_committee_id;
+      AND status != 'Deleted'; -- Exclude deleted images
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1477,15 +1534,27 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetProfileImageByEntity`(
     IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
-    IN p_entity_id INT,
-    IN p_committee_id INT
+    IN p_entity_id INT
 )
 BEGIN
-    SELECT image_url 
-    FROM images 
+    SELECT 
+        image_id,
+        image_url,
+        original_image_name,
+        image_name,
+        file_size,
+        mime_type,
+        entity_type, 
+        entity_id,
+        committee_id,
+        uploaded_by,
+        is_profile_image,
+        status,
+        created_at,
+        updated_at
+    FROM images
     WHERE entity_type = p_entity_type 
       AND entity_id = p_entity_id
-      AND committee_id = p_committee_id
       AND is_profile_image = 1
     LIMIT 1;
 END ;;
@@ -1562,15 +1631,49 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `InsertImage`(
     IN p_image_url VARCHAR(255),
+    IN p_original_image_name VARCHAR(255),
     IN p_image_name VARCHAR(255),
+    IN p_file_size BIGINT,
+    IN p_mime_type VARCHAR(100),
     IN p_entity_type ENUM('Admin', 'Committee', 'Homestay', 'Activity', 'Event', 'Product'),
     IN p_entity_id INT,
-    IN p_committee_id INT,
-    IN p_is_profile_image TINYINT(1)
+    IN p_committee_id INT,  
+    IN p_uploaded_by INT,
+    IN p_is_profile_image TINYINT(1),
+    IN p_status ENUM('Active', 'Archived', 'Deleted')
 )
 BEGIN
-    INSERT INTO images (image_url, image_name, entity_type, entity_id, committee_id, is_profile_image)
-    VALUES (p_image_url, p_image_name, p_entity_type, p_entity_id, p_committee_id, p_is_profile_image);
+    -- Insert image details into the images table
+    INSERT INTO images (
+        image_url, 
+        original_image_name, 
+        image_name, 
+        file_size, 
+        mime_type, 
+        entity_type, 
+        entity_id, 
+        committee_id, 
+        uploaded_by, 
+        is_profile_image, 
+        status, 
+        created_at, 
+        updated_at
+    ) 
+    VALUES (
+        p_image_url, 
+        p_original_image_name, 
+        p_image_name, 
+        p_file_size, 
+        p_mime_type, 
+        p_entity_type, 
+        p_entity_id, 
+        IFNULL(p_committee_id, NULL),  -- Ensures NULL is stored if no committee ID is provided or Inserted by Admin
+        IFNULL(p_uploaded_by, NULL),   -- Ensures NULL is stored if no uploader ID is provided
+        p_is_profile_image, 
+        p_status, 
+        CURRENT_TIMESTAMP,  -- Sets the current timestamp for created_at
+        CURRENT_TIMESTAMP   -- Sets the current timestamp for updated_at
+    );
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2261,4 +2364,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-10 14:59:12
+-- Dump completed on 2025-03-12 15:26:24
