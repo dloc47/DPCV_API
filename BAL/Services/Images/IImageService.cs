@@ -10,7 +10,7 @@ namespace DPCV_API.BAL.Services.Images
         Task<ImageDTO?> GetProfileImageByEntityAsync(EntityTypeEnum entityType, int entityId);
         Task<ImageDTO?> GetImageByIdAsync(int imageId);
         Task<(bool Success, string Message)> UpdateImageAsync(int imageId, IFormFile? newFile, ClaimsPrincipal user);
-        Task<bool> DeleteImageAsync(int imageId, ClaimsPrincipal user);
-        Task<bool> SetProfileImageAsync(int imageId, ClaimsPrincipal user);
+        Task<(bool Success, string Message)> DeleteImageAsync(int imageId, ClaimsPrincipal user);
+        Task<(bool Success, string Message)> SetProfileImageAsync(int imageId, ClaimsPrincipal user);
     }
 }

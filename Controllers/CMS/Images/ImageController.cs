@@ -109,10 +109,16 @@ namespace DPCV_API.Controllers.CMS.Images
         public async Task<IActionResult> DeleteImage(int imageId)
         {
             var user = HttpContext.User;
-            var success = await _imageService.DeleteImageAsync(imageId, user);
-            if (success)
-                return NoContent();
-            return BadRequest();
+            var result = await _imageService.DeleteImageAsync(imageId, user);
+
+            if (result.Success)
+            {
+                // Return HTTP 200 OK with a success message
+                return Ok(new { Message = "Image deleted successfully." });
+            }
+
+            // Return a detailed error message to the client
+            return BadRequest(new { Message = result.Message });
         }
 
         [Authorize]
@@ -120,10 +126,14 @@ namespace DPCV_API.Controllers.CMS.Images
         public async Task<IActionResult> SetProfileImage(int imageId)
         {
             var user = HttpContext.User;
-            var success = await _imageService.SetProfileImageAsync(imageId, user);
+            var (success, message) = await _imageService.SetProfileImageAsync(imageId, user);
+
             if (success)
-                return NoContent();
-            return BadRequest();
+                return Ok(new { Message = message });
+
+            return BadRequest(new { Message = message });
         }
+
+
     }
 }

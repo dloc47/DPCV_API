@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using DPCV_API.Configuration.DbContext;
 using DPCV_API.Models.ImageModel.DPCV_API.Models.ImageModel;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace DPCV_API.BAL.Services.Images
 {
@@ -328,7 +329,8 @@ namespace DPCV_API.BAL.Services.Images
                     return (false, "Image not found.");
                 }
 
-                if (userRole != "Admin" && existingImage.CommitteeId?.ToString() != userCommitteeId)
+                // Authorization: Only Admin (Role = "1") or the Committee owner can update the image
+                if (userRole != "1" && existingImage.CommitteeId?.ToString() != userCommitteeId)
                 {
                     _logger.LogWarning("Unauthorized attempt to update image: ImageId={ImageId}", imageId);
                     _dataManager.RollbackTransaction(); // Rollback only if transaction started
@@ -415,35 +417,132 @@ namespace DPCV_API.BAL.Services.Images
         }
 
 
-        public async Task<bool> DeleteImageAsync(int imageId, ClaimsPrincipal user)
+        public async Task<(bool Success, string Message)> DeleteImageAsync(int imageId, ClaimsPrincipal user)
         {
+            _logger.LogInformation("Deleting image: ImageId={ImageId}", imageId);
+
             try
             {
+                // Start a new transaction
+                _dataManager.BeginTransaction();
+                _logger.LogInformation("Transaction started successfully.");
+
+                // Fetch the existing image details
+                var existingImage = await GetImageByIdAsync(imageId);
+                if (existingImage == null)
+                {
+                    _logger.LogWarning("Image not found: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction(); // Rollback if image not found
+                    return (false, "Image not found.");
+                }
+
+                // Authorization: Only Admin (Role = "1") or the Committee owner can delete the profile image
+                var userRole = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                var userCommitteeId = user.Claims.FirstOrDefault(c => c.Type == "committee_id")?.Value;
+
+                if (userRole != "1" && existingImage.CommitteeId?.ToString() != userCommitteeId)
+                {
+                    _logger.LogWarning("Unauthorized attempt to delete image: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction(); // Rollback if unauthorized
+                    return (false, "Unauthorized.");
+                }
+
+                // Delete the image record from the database
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_image_id", imageId);
-                return await _dataManager.ExecuteNonQueryAsync("DeleteImage", CommandType.StoredProcedure);
+
+                bool deleteResult = await _dataManager.ExecuteNonQueryAsync("DeleteImage", CommandType.StoredProcedure);
+                if (!deleteResult)
+                {
+                    _logger.LogWarning("Failed to delete image from database: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction(); // Rollback if database deletion fails
+                    return (false, "Failed to delete image.");
+                }
+
+                // Delete the associated image file from the file system (wwwroot/Uploads)
+                if (!string.IsNullOrEmpty(existingImage.ImageUrl))
+                {
+                    string filePath = Path.Combine(_environment.WebRootPath, existingImage.ImageUrl.TrimStart('/'));
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                        _logger.LogInformation("Deleted image file: {FilePath}", filePath);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Image file not found: {FilePath}", filePath);
+                    }
+                }
+
+                // Commit the transaction if everything succeeds
+                _dataManager.CommitTransaction();
+                _logger.LogInformation("Transaction committed successfully.");
+                return (true, "Image deleted successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting image");
-                return false;
+                _logger.LogError(ex, "Error deleting image: ImageId={ImageId}", imageId);
+
+                // Rollback the transaction in case of an error
+                try
+                {
+                    _dataManager.RollbackTransaction();
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError(rollbackEx, "Rollback transaction failed: ImageId={ImageId}", imageId);
+                }
+
+                return (false, "An error occurred while deleting the image.");
             }
         }
 
-        public async Task<bool> SetProfileImageAsync(int imageId, ClaimsPrincipal user)
+        public async Task<(bool Success, string Message)> SetProfileImageAsync(int imageId, ClaimsPrincipal user)
         {
+            _logger.LogInformation("Setting profile image: ImageId={ImageId}", imageId);
+
             try
             {
+                // Fetch the image details first
+                var image = await GetImageByIdAsync(imageId);
+                if (image == null)
+                {
+                    _logger.LogWarning("Image not found: ImageId={ImageId}", imageId);
+                    return (false, "Image not found.");
+                }
+
+                // Extract user role and committee ID from claims
+                var userRole = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                var userCommitteeId = user.Claims.FirstOrDefault(c => c.Type == "committee_id")?.Value;
+
+                // Authorization: Only Admin (Role = "1") or the Committee owner can update the profile image
+                if (userRole != "1" && (image.CommitteeId == null || image.CommitteeId.ToString() != userCommitteeId))
+                {
+                    _logger.LogWarning("Unauthorized attempt to set profile image: ImageId={ImageId}", imageId);
+                    return (false, "Unauthorized.");
+                }
+
+                // Call stored procedure to update profile image
                 _dataManager.ClearParameters();
                 _dataManager.AddParameter("@p_image_id", imageId);
-                return await _dataManager.ExecuteNonQueryAsync("SetProfileImage", CommandType.StoredProcedure);
+
+                bool updateResult = await _dataManager.ExecuteNonQueryAsync("SetProfileImage", CommandType.StoredProcedure);
+                if (!updateResult)
+                {
+                    _logger.LogWarning("Failed to set profile image: ImageId={ImageId}", imageId);
+                    return (false, "Failed to update profile image.");
+                }
+
+                _logger.LogInformation("Profile image updated successfully: ImageId={ImageId}", imageId);
+                return (true, "Profile image updated successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error setting profile image");
-                return false;
+                _logger.LogError(ex, "Error setting profile image: ImageId={ImageId}", imageId);
+                return (false, "An error occurred while setting the profile image.");
             }
         }
+
 
     }
 }
