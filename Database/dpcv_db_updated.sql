@@ -233,7 +233,7 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (7,'/Uploads/2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg',3792,'image/jpeg','Homestay',2,NULL,3,1,'Active','2025-03-12 11:04:34','2025-03-12 11:05:04'),(8,'/Uploads/353e3833-9ad3-4741-87e3-cba3a77bcb4a.jpg','adventure-cold-daylight-291732.jpg','353e3833-9ad3-4741-87e3-cba3a77bcb4a.jpg',648228,'image/jpeg','Committee',1,NULL,3,0,'Active','2025-03-12 11:05:18','2025-03-12 11:05:18');
+INSERT INTO `images` VALUES (7,'/Uploads/2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg',3792,'image/jpeg','Homestay',2,NULL,3,1,'Active','2025-03-12 11:04:34','2025-03-12 11:05:04'),(8,'/Uploads/4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg','AI-image.jpg','4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg',191737,'image/jpeg','Committee',1,NULL,3,0,'Active','2025-03-12 11:05:18','2025-03-13 05:49:07');
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2254,8 +2254,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateImage`(
     IN p_original_image_name VARCHAR(255),
     IN p_image_name VARCHAR(255),
     IN p_file_size BIGINT,
-    IN p_mime_type VARCHAR(100),
-    IN p_is_profile_image TINYINT(1) -- Use TINYINT(1) instead of BOOLEAN
+    IN p_mime_type VARCHAR(100)
+    -- IN p_is_profile_image TINYINT(1)
 )
 BEGIN
     -- Check if image exists before updating
@@ -2267,7 +2267,6 @@ BEGIN
             image_name = IFNULL(p_image_name, image_name),
             file_size = IFNULL(p_file_size, file_size),
             mime_type = IFNULL(p_mime_type, mime_type),
-            is_profile_image = p_is_profile_image, -- No need for IFNULL, it's either 0 or 1
             updated_at = CURRENT_TIMESTAMP
         WHERE image_id = p_image_id;
     ELSE
@@ -2417,4 +2416,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-12 16:44:17
+-- Dump completed on 2025-03-13 11:22:18

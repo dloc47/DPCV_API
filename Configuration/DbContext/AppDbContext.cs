@@ -10,12 +10,14 @@ namespace DPCV_API.Configuration.DbContext
         private MySqlTransaction? _transaction;
         private bool _disposed = false;
 
+        // Constructor initializes the database connection using the connection string from AppConfiguration.
         public AppDbContext()
         {
             var config = new AppConfiguration();
             _connection = new MySqlConnection(config.ConnectionString);
         }
 
+        // Opens the database connection and initializes the command object.
         public void OpenContext()
         {
             if (_connection.State != ConnectionState.Open)
@@ -24,6 +26,7 @@ namespace DPCV_API.Configuration.DbContext
             _command = _connection.CreateCommand();
         }
 
+        // Begins a new database transaction.
         public void BeginTransaction()
         {
             if (_connection.State != ConnectionState.Open)
@@ -36,13 +39,14 @@ namespace DPCV_API.Configuration.DbContext
             }
         }
 
-
+        // Commits the current transaction, saving all changes made since the transaction began.
         public void CommitTransaction()
         {
             _transaction?.Commit();
             _transaction = null; // Reset transaction
         }
 
+        // Rolls back the current transaction, undoing all changes made since the transaction began.
         public void RollbackTransaction()
         {
             try
@@ -60,8 +64,7 @@ namespace DPCV_API.Configuration.DbContext
             }
         }
 
-
-
+        // Closes the database connection and disposes of the command and transaction objects.
         public void CloseContext()
         {
             _transaction?.Dispose();
@@ -71,8 +74,10 @@ namespace DPCV_API.Configuration.DbContext
                 _connection.Close();
         }
 
+        // Returns the current MySqlCommand object.
         public MySqlCommand GetCommand() => _command;
 
+        // Implements IDisposable to ensure proper cleanup of resources.
         public void Dispose()
         {
             if (!_disposed)

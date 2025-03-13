@@ -8,6 +8,7 @@ namespace DPCV_API.Configuration.DbContext
         private readonly AppDbContext _dbContext;
         private readonly MySqlCommand _command;
 
+        // Constructor initializes the AppDbContext and opens the database connection.
         public DataManager()
         {
             _dbContext = new AppDbContext();
@@ -42,17 +43,7 @@ namespace DPCV_API.Configuration.DbContext
         /// </summary>
         public void RollbackTransaction()
         {
-            try
-            {
-                if (_dbContext != null)
-                {
-                    _dbContext.RollbackTransaction();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
+            _dbContext.RollbackTransaction();
         }
 
         /// <summary>
@@ -64,6 +55,9 @@ namespace DPCV_API.Configuration.DbContext
             DataTable dataTable = new DataTable();
             try
             {
+                if (_dbContext.GetCommand().Connection.State != ConnectionState.Open)
+                    _dbContext.OpenContext();
+
                 using (var command = _dbContext.GetCommand())
                 {
                     command.CommandText = query;
@@ -71,7 +65,7 @@ namespace DPCV_API.Configuration.DbContext
 
                     using (var adapter = new MySqlDataAdapter(command))
                     {
-                        await Task.Run(() => adapter.Fill(dataTable)); // Fill DataTable asynchronously
+                        await Task.Run(() => adapter.Fill(dataTable));
                     }
                 }
             }
@@ -90,11 +84,14 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
+                if (_dbContext.GetCommand().Connection.State != ConnectionState.Open)
+                    _dbContext.OpenContext();
+
                 using (var command = _dbContext.GetCommand())
                 {
                     command.CommandText = query;
                     command.CommandType = commandType;
-                    return await command.ExecuteNonQueryAsync() > 0; // Execute command and check success
+                    return await command.ExecuteNonQueryAsync() > 0;
                 }
             }
             catch (Exception ex)
@@ -111,10 +108,13 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
-                var command = _dbContext.GetCommand(); // Don't use `using` to keep the reader open
+                if (_dbContext.GetCommand().Connection.State != ConnectionState.Open)
+                    _dbContext.OpenContext();
+
+                var command = _dbContext.GetCommand();
                 command.CommandText = query;
                 command.CommandType = commandType;
-                return (MySqlDataReader)await command.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                return (MySqlDataReader)await command.ExecuteReaderAsync();
             }
             catch (Exception ex)
             {
@@ -130,6 +130,9 @@ namespace DPCV_API.Configuration.DbContext
         {
             try
             {
+                if (_dbContext.GetCommand().Connection.State != ConnectionState.Open)
+                    _dbContext.OpenContext();
+
                 using (var command = _dbContext.GetCommand())
                 {
                     command.CommandText = query;

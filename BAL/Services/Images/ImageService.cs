@@ -315,6 +315,7 @@ namespace DPCV_API.BAL.Services.Images
             try
             {
                 _dataManager.BeginTransaction(); // Start Transaction
+                _logger.LogInformation("Transaction started successfully."); // Log confirmation
 
                 var userRole = user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
                 var userCommitteeId = user.Claims.FirstOrDefault(c => c.Type == "committee_id")?.Value;
@@ -322,102 +323,97 @@ namespace DPCV_API.BAL.Services.Images
                 var existingImage = await GetImageByIdAsync(imageId);
                 if (existingImage == null)
                 {
-                    _dataManager.RollbackTransaction();
                     _logger.LogWarning("Image not found: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction(); // Rollback only if transaction started
                     return (false, "Image not found.");
                 }
 
                 if (userRole != "Admin" && existingImage.CommitteeId?.ToString() != userCommitteeId)
                 {
-                    _dataManager.RollbackTransaction();
                     _logger.LogWarning("Unauthorized attempt to update image: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction(); // Rollback only if transaction started
                     return (false, "Unauthorized.");
                 }
 
-                string imageUrl = existingImage.ImageUrl;
-                string originalImageName = existingImage.OriginalImageName;
-                string imageName = existingImage.ImageName;
-                long? fileSize = existingImage.FileSize;
-                string? mimeType = existingImage.MimeType;
+                if (newFile == null)
+                {
+                    _logger.LogWarning("No new file provided for update: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction();
+                    return (false, "No new file provided.");
+                }
 
                 string uploadFolder = Path.Combine(_environment.WebRootPath, "Uploads");
                 if (!Directory.Exists(uploadFolder))
                     Directory.CreateDirectory(uploadFolder);
 
-                if (newFile != null)
+                var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                string fileExtension = Path.GetExtension(newFile.FileName).ToLower();
+                if (!allowedExtensions.Contains(fileExtension))
                 {
-                    var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                    string fileExtension = Path.GetExtension(newFile.FileName).ToLower();
-                    if (!allowedExtensions.Contains(fileExtension))
-                    {
-                        _dataManager.RollbackTransaction();
-                        _logger.LogWarning("File type not allowed: {FileExtension}", fileExtension);
-                        return (false, "File type not supported.");
-                    }
-
-                    originalImageName = newFile.FileName;
-                    imageName = $"{Guid.NewGuid()}{fileExtension}";
-                    fileSize = newFile.Length;
-                    mimeType = newFile.ContentType;
-                    imageUrl = $"/Uploads/{imageName}";
-
-                    string newFilePath = Path.Combine(uploadFolder, imageName);
-
-                    // Save the file **only after DB update succeeds**
-                    _logger.LogInformation("Updating image in database first...");
-
-                    _dataManager.ClearParameters();
-                    _dataManager.AddParameter("@p_image_id", imageId);
-                    _dataManager.AddParameter("@p_new_image_url", imageUrl);
-                    _dataManager.AddParameter("@p_original_image_name", originalImageName);
-                    _dataManager.AddParameter("@p_image_name", imageName);
-                    _dataManager.AddParameter("@p_file_size", fileSize);
-                    _dataManager.AddParameter("@p_mime_type", mimeType);
-
-                    var result = await _dataManager.ExecuteNonQueryAsync("UpdateImage", CommandType.StoredProcedure);
-
-                    if (!result)
-                    {
-                        _dataManager.RollbackTransaction();
-                        _logger.LogWarning("Failed to update image in database: ImageId={ImageId}", imageId);
-                        return (false, "Failed to update image.");
-                    }
-
-                    // If DB update is successful, save the new image
-                    using (var fileStream = new FileStream(newFilePath, FileMode.Create))
-                    {
-                        await newFile.CopyToAsync(fileStream);
-                    }
-
-                    _logger.LogInformation("New file uploaded: {FilePath}", newFilePath);
-
-                    // Delete the old image file
-                    if (!string.IsNullOrEmpty(existingImage.ImageUrl))
-                    {
-                        string oldFilePath = Path.Combine(_environment.WebRootPath, existingImage.ImageUrl.TrimStart('/'));
-                        if (File.Exists(oldFilePath))
-                        {
-                            File.Delete(oldFilePath);
-                            _logger.LogInformation("Deleted old file: {OldFilePath}", oldFilePath);
-                        }
-                    }
-
-                    _dataManager.CommitTransaction();
-                    return (true, "Image updated successfully.");
-                }
-                else
-                {
+                    _logger.LogWarning("File type not allowed: {FileExtension}", fileExtension);
                     _dataManager.RollbackTransaction();
-                    return (false, "No new file provided.");
+                    return (false, "File type not supported.");
                 }
+
+                string imageName = $"{Guid.NewGuid()}{fileExtension}";
+                string imageUrl = $"/Uploads/{imageName}";
+                string newFilePath = Path.Combine(uploadFolder, imageName);
+
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_image_id", imageId);
+                _dataManager.AddParameter("@p_new_image_url", imageUrl);
+                _dataManager.AddParameter("@p_original_image_name", newFile.FileName);
+                _dataManager.AddParameter("@p_image_name", imageName);
+                _dataManager.AddParameter("@p_file_size", newFile.Length);
+                _dataManager.AddParameter("@p_mime_type", newFile.ContentType);
+
+                var result = await _dataManager.ExecuteNonQueryAsync("UpdateImage", CommandType.StoredProcedure);
+                if (!result)
+                {
+                    _logger.LogWarning("Failed to update image in database: ImageId={ImageId}", imageId);
+                    _dataManager.RollbackTransaction();
+                    return (false, "Failed to update image.");
+                }
+
+                // Save the file **only after DB update succeeds**
+                using (var fileStream = new FileStream(newFilePath, FileMode.Create))
+                {
+                    await newFile.CopyToAsync(fileStream);
+                }
+
+                // Delete old image
+                if (!string.IsNullOrEmpty(existingImage.ImageUrl))
+                {
+                    string oldFilePath = Path.Combine(_environment.WebRootPath, existingImage.ImageUrl.TrimStart('/'));
+                    if (File.Exists(oldFilePath))
+                    {
+                        File.Delete(oldFilePath);
+                        _logger.LogInformation("Deleted old file: {OldFilePath}", oldFilePath);
+                    }
+                }
+
+                _dataManager.CommitTransaction();
+                _logger.LogInformation("Transaction committed successfully.");
+                return (true, "Image updated successfully.");
             }
             catch (Exception ex)
             {
-                _dataManager.RollbackTransaction();
                 _logger.LogError(ex, "Error updating image: ImageId={ImageId}", imageId);
+
+                // Ensure rollback only if transaction was started
+                try
+                {
+                    _dataManager.RollbackTransaction();
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError(rollbackEx, "Rollback transaction failed: ImageId={ImageId}", imageId);
+                }
+
                 return (false, "An error occurred while updating the image.");
             }
         }
+
 
         public async Task<bool> DeleteImageAsync(int imageId, ClaimsPrincipal user)
         {
