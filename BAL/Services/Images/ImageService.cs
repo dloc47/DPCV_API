@@ -19,7 +19,8 @@ namespace DPCV_API.BAL.Services.Images
             _environment = environment;
         }
 
-        public async Task<(bool Success, string Message, string? FilePath)> UploadMediaService(IFormFile file, EntityTypeEnum entityType, int entityId, ClaimsPrincipal user)
+        public async Task<(bool Success, string Message, string? FilePath)> UploadMediaService(
+            IFormFile file, EntityTypeEnum entityType, int entityId, ClaimsPrincipal user)
         {
             try
             {
@@ -43,7 +44,7 @@ namespace DPCV_API.BAL.Services.Images
                 string mimeType = file.ContentType;
                 long fileSize = file.Length;
 
-                // **Get Committee ID and UploadedBy from Claims**
+                // **Extract User ID and Committee ID from Claims**
                 int? committeeId = null;
                 int? uploadedBy = null;
 
@@ -63,33 +64,35 @@ namespace DPCV_API.BAL.Services.Images
                     committeeId = parsedCommitteeId;
                 }
 
-                // **Admin can upload images for any committee, but Committee users must match their own committee**
-                if (committeeId.HasValue)
+                // **Fetch entity's committee_id using stored procedure**
+                _dataManager.ClearParameters();
+                _dataManager.AddParameter("@p_entity_id", entityId);
+                _dataManager.AddParameter("@p_entity_type", entityType.ToString());
+
+                var entityCommitteeIdObject = await _dataManager.ExecuteScalarAsync<object>("GetEntityCommitteeIdForImage", CommandType.StoredProcedure);
+
+                int? entityCommitteeId = entityCommitteeIdObject != null && int.TryParse(entityCommitteeIdObject.ToString(), out int tempId)
+                    ? tempId
+                    : (int?)null;
+
+                // **Committee users can only upload images for their own entities**
+                if (committeeId.HasValue && entityCommitteeId.HasValue && committeeId.Value != entityCommitteeId.Value)
                 {
-                    _dataManager.ClearParameters();
-                    _dataManager.AddParameter("@p_entity_id", entityId);
-                    _dataManager.AddParameter("@p_entity_type", entityType.ToString());
-
-                    var entityCommitteeId = await _dataManager.ExecuteScalarAsync<int>("GetEntityCommitteeIdForImage", CommandType.StoredProcedure);
-
-                    if (entityCommitteeId != committeeId.Value)
-                    {
-                        _logger.LogWarning("Committee user {CommitteeId} tried to upload an image for entity {EntityId} but does not own it.", committeeId, entityId);
-                        return (false, "Unauthorized: You can only upload images for your own entities.", null);
-                    }
+                    _logger.LogWarning("Committee user {CommitteeId} tried to upload an image for entity {EntityId} but does not own it.", committeeId, entityId);
+                    return (false, "Unauthorized: You can only upload images for your own entities.", null);
                 }
 
-                // Define upload directory inside wwwroot
+                // **Define Upload Directory**
                 string uploadFolder = Path.Combine(_environment.WebRootPath, "Uploads");
 
-                // Ensure directory exists
+                // **Ensure directory exists**
                 if (!Directory.Exists(uploadFolder))
                 {
                     Directory.CreateDirectory(uploadFolder);
                     _logger.LogInformation("Created directory: {UploadFolder}", uploadFolder);
                 }
 
-                // Generate unique file name
+                // **Generate Unique File Name**
                 string uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
                 string filePath = Path.Combine(uploadFolder, uniqueFileName);
                 string relativeFilePath = $"/Uploads/{uniqueFileName}";
@@ -98,7 +101,7 @@ namespace DPCV_API.BAL.Services.Images
                 _dataManager.BeginTransaction();
                 try
                 {
-                    // Save file to server
+                    // **Save File to Server**
                     using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
                         await file.CopyToAsync(fileStream);
@@ -106,7 +109,7 @@ namespace DPCV_API.BAL.Services.Images
 
                     _logger.LogInformation("File saved: {FilePath}", filePath);
 
-                    // **Save Image Details to Database**
+                    // **Insert Image Details into Database**
                     _dataManager.ClearParameters();
                     _dataManager.AddParameter("@p_image_url", relativeFilePath);
                     _dataManager.AddParameter("@p_original_image_name", file.FileName);
@@ -115,7 +118,7 @@ namespace DPCV_API.BAL.Services.Images
                     _dataManager.AddParameter("@p_mime_type", mimeType);
                     _dataManager.AddParameter("@p_entity_type", entityType.ToString());
                     _dataManager.AddParameter("@p_entity_id", entityId);
-                    _dataManager.AddParameter("@p_committee_id", committeeId.HasValue ? committeeId.Value : (object)DBNull.Value);
+                    _dataManager.AddParameter("@p_committee_id", entityCommitteeId.HasValue ? entityCommitteeId.Value : (object)DBNull.Value);
                     _dataManager.AddParameter("@p_uploaded_by", uploadedBy.HasValue ? uploadedBy.Value : (object)DBNull.Value);
                     _dataManager.AddParameter("@p_is_profile_image", 0);
                     _dataManager.AddParameter("@p_status", ImageStatusEnum.Active.ToString());
@@ -131,19 +134,19 @@ namespace DPCV_API.BAL.Services.Images
                     }
                     else
                     {
+                        // **Rollback Transaction & Delete File if Insert Fails**
                         _logger.LogWarning("Failed to insert image details into the database. Deleting the uploaded file.");
-                        File.Delete(filePath); // Rollback file save if DB insert fails
+                        File.Delete(filePath);
                         _dataManager.RollbackTransaction();
                         return (false, "Failed to save image data. Please try again later.", null);
                     }
                 }
                 catch (Exception ex)
                 {
-                    // **Rollback Transaction on Exception**
+                    // **Rollback Transaction on Exception & Delete File**
                     _dataManager.RollbackTransaction();
                     _logger.LogError(ex, "Error uploading image: {FileName}", file.FileName);
 
-                    // Delete the uploaded file if the transaction fails
                     if (File.Exists(filePath))
                     {
                         File.Delete(filePath);
@@ -158,7 +161,6 @@ namespace DPCV_API.BAL.Services.Images
                 return (false, "An unexpected error occurred while uploading the image.", null);
             }
         }
-
 
 
         /// <summary>

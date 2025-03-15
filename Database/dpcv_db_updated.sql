@@ -224,7 +224,7 @@ CREATE TABLE `images` (
   KEY `committee_id` (`committee_id`),
   KEY `uploaded_by` (`uploaded_by`),
   CONSTRAINT `fk_images_committees` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -233,7 +233,7 @@ CREATE TABLE `images` (
 
 LOCK TABLES `images` WRITE;
 /*!40000 ALTER TABLE `images` DISABLE KEYS */;
-INSERT INTO `images` VALUES (7,'/Uploads/2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg',3792,'image/jpeg','Homestay',2,1,3,0,'Active','2025-03-12 11:04:34','2025-03-13 09:53:28'),(8,'/Uploads/4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg','AI-image.jpg','4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg',191737,'image/jpeg','Committee',1,1,3,0,'Active','2025-03-12 11:05:18','2025-03-13 09:52:34'),(11,'/Uploads/2bbe3711-c42f-4123-8497-8b5b274b15cb.jpg','ryuuki-r-cute-anime.jpg','2bbe3711-c42f-4123-8497-8b5b274b15cb.jpg',538132,'image/jpeg','Homestay',2,1,3,1,'Active','2025-03-13 08:50:14','2025-03-13 09:53:28');
+INSERT INTO `images` VALUES (7,'/Uploads/2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg','WhatsApp Image 2025-03-06 at 12.21.07 PM.jpeg','2062c73c-c466-436d-9bf3-4a43b9d67460.jpeg',3792,'image/jpeg','Homestay',2,1,3,0,'Active','2025-03-12 11:04:34','2025-03-13 09:53:28'),(8,'/Uploads/4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg','AI-image.jpg','4c7a3f93-72dd-4152-b307-9be76a255ed5.jpg',191737,'image/jpeg','Committee',1,1,3,0,'Active','2025-03-12 11:05:18','2025-03-13 09:52:34'),(11,'/Uploads/2bbe3711-c42f-4123-8497-8b5b274b15cb.jpg','ryuuki-r-cute-anime.jpg','2bbe3711-c42f-4123-8497-8b5b274b15cb.jpg',538132,'image/jpeg','Homestay',2,1,3,1,'Active','2025-03-13 08:50:14','2025-03-13 09:53:28'),(12,'/Uploads/4adcd262-e89e-44f1-9bcc-caa4965a6340.jpg','d7ccd6c5e5a2e3434e72d93a38b9772d.jpg','4adcd262-e89e-44f1-9bcc-caa4965a6340.jpg',79382,'image/jpeg','Product',2,2,3,0,'Active','2025-03-15 04:45:33','2025-03-15 04:45:33');
 /*!40000 ALTER TABLE `images` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2416,4 +2416,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-13 16:51:54
+-- Dump completed on 2025-03-15 10:16:21
