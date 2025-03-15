@@ -10,10 +10,34 @@ namespace DPCV_API.Controllers.Website
     public class HomestayController : ControllerBase
     {
         private readonly IHomestayService _homestayService;
+        private readonly ILogger<HomestayController> _logger;
 
-        public HomestayController(IHomestayService homestayService)
+        public HomestayController(IHomestayService homestayService, ILogger<HomestayController> logger)
         {
             _homestayService = homestayService;
+            _logger = logger;
+        }
+
+        // ✅ Get Paginated Homestays
+        [HttpGet("paginated-homestays")]
+        public async Task<IActionResult> GetPaginatedHomestays([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                {
+                    return BadRequest(new { message = "Invalid pagination parameters." });
+                }
+
+                var result = await _homestayService.GetPaginatedHomestaysAsync(pageNumber, pageSize);
+
+                return result.Data.Any() ? Ok(result) : NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching paginated homestays.");
+                return StatusCode(500, new { message = "An error occurred while fetching homestay data." });
+            }
         }
 
         // ✅ Get All Homestays

@@ -10,10 +10,34 @@ namespace DPCV_API.Controllers.Website
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly ILogger<ProductController> _logger;
 
-        public ProductController(IProductService productService)
+        public ProductController(IProductService productService, ILogger<ProductController> logger)
         {
             _productService = productService;
+            _logger = logger;
+        }
+
+        // ✅ Get Paginated Products
+        [HttpGet("paginated-products")]
+        public async Task<IActionResult> GetPaginatedProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                {
+                    return BadRequest(new { message = "Invalid pagination parameters." });
+                }
+
+                var result = await _productService.GetPaginatedProductsAsync(pageNumber, pageSize);
+
+                return result.Data.Any() ? Ok(result) : NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching paginated products.");
+                return StatusCode(500, new { message = "An error occurred while fetching product data." });
+            }
         }
 
         // ✅ Get All Products

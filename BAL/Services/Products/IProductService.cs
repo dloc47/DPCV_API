@@ -1,10 +1,12 @@
-﻿using DPCV_API.Models.ProductModel;
+﻿using DPCV_API.Models.CommonModel;
+using DPCV_API.Models.ProductModel;
 using System.Security.Claims;
 
 namespace DPCV_API.BAL.Services.Products
 {
     public interface IProductService
     {
+        Task<PaginatedResponse<ProductResponseDTO>> GetPaginatedProductsAsync(int pageNumber, int pageSize);
         Task<List<ProductResponseDTO>> GetAllProductsAsync();
         Task<ProductResponseDTO?> GetProductByIdAsync(int productId);
         Task<bool> CreateProductAsync(ProductDTO product, ClaimsPrincipal user);

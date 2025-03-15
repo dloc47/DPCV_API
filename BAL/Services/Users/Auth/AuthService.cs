@@ -72,6 +72,10 @@ namespace DPCV_API.BAL.Services.Users.Auth
             {
                 return new ServiceResult { Errors = new List<string> { "User does not exist." } };
             }
+            else if (!user.IsActive)
+            {
+                return new ServiceResult { Errors = new List<string> { "Account is inactive. Please contact support." } };
+            }
             else if (user.Password != ComputeSha256Hash(authDto.Password))
             {
                 return new ServiceResult { Errors = new List<string> { "Incorrect password." } };
@@ -84,12 +88,14 @@ namespace DPCV_API.BAL.Services.Users.Auth
             }
 
             var tokens = GenerateTokens(user);
+
             return new ServiceResult
             {
                 Data = tokens,
                 Message = "Login successful."
             };
         }
+
 
         public async Task<ServiceResult> RefreshTokenAsync(RefreshTokenDTO refreshTokenDto)
         {
@@ -168,8 +174,7 @@ namespace DPCV_API.BAL.Services.Users.Auth
                 Token = token,
                 RefreshToken = refreshToken,
                 RoleId = user.RoleId,
-                UserId = user.UserId,
-                DistrictId = user.DistrictId
+                UserId = user.UserId
             };
         }
 
@@ -187,8 +192,8 @@ namespace DPCV_API.BAL.Services.Users.Auth
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Role, user.RoleId.ToString()),
-                new Claim("DistrictId", user.DistrictId?.ToString() ?? string.Empty)
+                new Claim(ClaimTypes.Role, user.RoleId.ToString())
+                //new Claim("role", user.RoleId.ToString()) // Use "role" instead of `ClaimTypes.Role`
             };
 
             var token = new JwtSecurityToken(

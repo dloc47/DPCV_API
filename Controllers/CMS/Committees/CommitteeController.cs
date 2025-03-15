@@ -11,10 +11,12 @@ namespace DPCV_API.Controllers.Website
     public class CommitteeController : ControllerBase
     {
         private readonly ICommitteeService _committeeService;
+        private readonly ILogger<CommitteeController> _logger;
 
-        public CommitteeController(ICommitteeService committeeService)
+        public CommitteeController(ICommitteeService committeeService, ILogger<CommitteeController> logger)
         {
             _committeeService = committeeService;
+            _logger = logger;
         }
 
         [HttpGet("villages")]
@@ -23,6 +25,28 @@ namespace DPCV_API.Controllers.Website
             var result = await _committeeService.GetAllVillageNamesAsync();
             return Ok(result);
         }
+
+        [HttpGet("paginated-committees")]
+        public async Task<IActionResult> GetPaginatedCommittees([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                {
+                    return BadRequest(new { message = "Invalid pagination parameters." });
+                }
+
+                var result = await _committeeService.GetPaginatedCommitteesAsync(pageNumber, pageSize);
+
+                return result.Data.Any() ? Ok(result) : NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching paginated committees.");
+                return StatusCode(500, new { message = "An error occurred while fetching committee data." });
+            }
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetAllCommittees()

@@ -1,6 +1,7 @@
 ﻿using DPCV_API.Configuration.DbContext;
 using DPCV_API.Helpers;
 using DPCV_API.Models.CommitteeModel;
+using DPCV_API.Models.CommonModel;
 using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
@@ -47,6 +48,64 @@ namespace DPCV_API.BAL.Services.Committees
 
             return committees;
         }
+
+        // ✅ Get Paginated Committees
+        public async Task<PaginatedResponse<CommitteeResponseDTO>> GetPaginatedCommitteesAsync(int pageNumber, int pageSize)
+        {
+            string procedureName = "GetPaginatedCommittees";
+
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<CommitteeResponseDTO> committees = new();
+
+            foreach (DataRow row in result.Rows)
+            {
+                committees.Add(new CommitteeResponseDTO
+                {
+                    CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    CommitteeName = row["committee_name"].ToString()!,
+                    Description = row["description"]?.ToString(),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    ContactNumber = row["contact_number"]?.ToString(),
+                    Email = row["email"]?.ToString(),
+                    Address = row["address"]?.ToString(),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    TouristAttractions = JsonHelper.DeserializeJsonSafely<List<TouristAttraction>>(row["tourist_attractions"], "tourist_attractions"),
+                    Latitude = row["latitude"] != DBNull.Value ? Convert.ToDecimal(row["latitude"]) : null,
+                    Longitude = row["longitude"] != DBNull.Value ? Convert.ToDecimal(row["longitude"]) : null,
+                    Leadership = JsonHelper.DeserializeJsonSafely<List<LeadershipMember>>(row["leadership"], "leadership"),
+                    IsVerifiable = Convert.ToInt32(row["isVerifiable"]),
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    IsActive = Convert.ToInt32(row["is_active"]),
+                    VerificationStatus = row["verification_status"]?.ToString(),
+                    DistrictName = row["district_name"]?.ToString()
+                });
+            }
+
+            return new PaginatedResponse<CommitteeResponseDTO>
+            {
+                Data = committees,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalCommitteeCountAsync()
+            };
+        }
+
+        // ✅ Get Total Committees Count
+        private async Task<int> GetTotalCommitteeCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM committees";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
+        }
+
 
         public async Task<List<CommitteeResponseDTO>> GetAllCommitteesAsync()
         {

@@ -1,6 +1,7 @@
 ﻿using DPCV_API.Configuration.DbContext;
 using DPCV_API.Helpers;
 using DPCV_API.Models.ActivityModel;
+using DPCV_API.Models.CommonModel;
 using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
@@ -16,6 +17,59 @@ namespace DPCV_API.BAL.Services.Activities
         {
             _dataManager = dataManager;
             _logger = logger;
+        }
+
+        // ✅ Get Paginated Activities
+        public async Task<PaginatedResponse<ActivityResponseDTO>> GetPaginatedActivitiesAsync(int pageNumber, int pageSize)
+        {
+            string procedureName = "GetPaginatedActivities";
+
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<ActivityResponseDTO> activities = new();
+
+            foreach (DataRow row in result.Rows)
+            {
+                activities.Add(new ActivityResponseDTO
+                {
+                    ActivityId = Convert.ToInt32(row["activity_id"]),
+                    ActivityName = row["activity_name"].ToString()!,
+                    Description = row["description"]?.ToString(),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
+                    IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    is_active = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
+                });
+            }
+
+            return new PaginatedResponse<ActivityResponseDTO>
+            {
+                Data = activities,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalActivityCountAsync()
+            };
+        }
+
+        // ✅ Get Total Activities Count
+        private async Task<int> GetTotalActivityCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM activities";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
         }
 
         // ✅ Get All Activities

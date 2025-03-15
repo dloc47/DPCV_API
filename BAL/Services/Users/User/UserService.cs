@@ -1,4 +1,7 @@
 ﻿using DPCV_API.Configuration.DbContext;
+using DPCV_API.Helpers;
+using DPCV_API.Models.ActivityModel;
+using DPCV_API.Models.CommonModel;
 using DPCV_API.Models.Users;
 using System.Data;
 using System.Security.Claims;
@@ -18,64 +21,138 @@ namespace DPCV_API.BAL.Services.Users
             _logger = logger;
         }
 
-        // ✅ Get All Users (Accessible to everyone)
-        public async Task<List<UserDTO>> GetAllUsersAsync()
+        // ✅ Get Paginated User
+        public async Task<PaginatedResponse<UserResponseDTO>> GetPaginatedUsersAsync(int pageNumber, int pageSize)
         {
-            string spName = "GetAllUsers";
-            List<UserDTO> users = new();
+            string procedureName = "GetPaginatedUsers";
 
-            try
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<UserResponseDTO> users = new();
+
+            foreach (DataRow row in result.Rows)
             {
-                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
-
-                foreach (DataRow row in result.Rows)
+                users.Add(new UserResponseDTO
                 {
-                    users.Add(MapUser(row));
-                }
-
-                _logger.LogInformation("Fetched {Count} users successfully.", users.Count);
+                    UserId = Convert.ToInt32(row["user_id"]),
+                    Name = row["name"].ToString() ?? string.Empty,
+                    Email = row["email"].ToString() ?? string.Empty,
+                    RoleId = Convert.ToInt32(row["role_id"]),
+                    RoleName = row["role_name"]?.ToString() ?? string.Empty,
+                    CommitteeId = row["committee_id"] != DBNull.Value ? Convert.ToInt32(row["committee_id"]) : (int?)null,
+                    CommitteeName = row["committee_name"]?.ToString(),
+                    DistrictId = row["district_id"] != DBNull.Value ? Convert.ToInt32(row["district_id"]) : (int?)null,
+                    DistrictName = row["district_name"] != DBNull.Value ? row["district_name"].ToString() : null,
+                    Region = row["region"] != DBNull.Value ? row["region"].ToString() : null,
+                    IsActive = Convert.ToBoolean(row["is_active"]),
+                    CreatedAt = Convert.ToDateTime(row["created_at"]),
+                    UpdatedAt = Convert.ToDateTime(row["updated_at"])
+                });
             }
-            catch (Exception ex)
+
+            return new PaginatedResponse<UserResponseDTO>
             {
-                _logger.LogError(ex, "Error fetching users.");
-                throw;
+                Data = users,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalUserCountAsync()
+            };
+        }
+
+        // ✅ Get total user count
+        private async Task<int> GetTotalUserCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM users";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
+        }
+
+
+        // ✅ Get All Users (Accessible to everyone)
+        public async Task<List<UserResponseDTO>?> GetAllUsersAsync()
+        {
+            string procedureName = "GetAllUsers";
+
+            // Execute stored procedure and get result set as DataTable
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
+            List<UserResponseDTO> users = new();
+
+            // Iterate through each row and map to UserResponseDTO
+            foreach (DataRow row in result.Rows)
+            {
+                users.Add(new UserResponseDTO
+                {
+                    UserId = Convert.ToInt32(row["user_id"]),
+                    Name = row["name"].ToString() ?? string.Empty,
+                    Email = row["email"].ToString() ?? string.Empty,
+                    //Password = row["password"].ToString() ?? string.Empty, // Uncomment this line if we need password for GetUsers, uncomment also in StoredProcedure and UserDTO model class
+                    RoleId = Convert.ToInt32(row["role_id"]),
+                    RoleName = row["role_name"]?.ToString() ?? string.Empty,
+                    CommitteeId = row["committee_id"] != DBNull.Value ? Convert.ToInt32(row["committee_id"]) : (int?)null,
+                    CommitteeName = row["committee_name"]?.ToString(),
+                    DistrictId = row["district_id"] != DBNull.Value ? Convert.ToInt32(row["district_id"]) : (int?)null, // ✅ Fix: Use null instead of 0
+                    DistrictName = row["district_name"] != DBNull.Value ? row["district_name"].ToString() : null, // ✅ Fix: Use null instead of ""
+                    Region = row["region"] != DBNull.Value ? row["region"].ToString() : null, // ✅ Fix: Use null instead of ""
+                    IsActive = Convert.ToBoolean(row["is_active"]),
+                    CreatedAt = Convert.ToDateTime(row["created_at"]),
+                    UpdatedAt = Convert.ToDateTime(row["updated_at"])
+                });
             }
 
             return users;
         }
 
+
         // ✅ Get User by ID (Accessible to everyone)
-        public async Task<UserDTO?> GetUserByIdAsync(int userId)
+        public async Task<UserResponseDTO?> GetUserByIdAsync(int userId)
         {
-            string spName = "GetUserById";
+            string procedureName = "GetUserById";
 
-            try
+            // Clear previous parameters and add the user ID as a parameter
+            _dataManager.ClearParameters();
+            _dataManager.AddParameter("@p_UserId", userId);
+
+            // Execute stored procedure and get result set as DataTable
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure);
+
+            // If no record is found, return null
+            if (result.Rows.Count == 0) return null;
+
+            DataRow row = result.Rows[0];
+
+            // Map the data row to UserResponseDTO and return
+            return new UserResponseDTO
             {
-                _dataManager.ClearParameters();
-                _dataManager.AddParameter("@p_UserId", userId);
-
-                DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
-
-                if (result.Rows.Count == 0)
-                {
-                    _logger.LogWarning("User with ID {UserId} not found.", userId);
-                    return null;
-                }
-
-                _logger.LogInformation("Fetched user with ID {UserId}.", userId);
-                return MapUser(result.Rows[0]);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching user with ID {UserId}.", userId);
-                throw;
-            }
+                UserId = Convert.ToInt32(row["user_id"]),
+                Name = row["name"].ToString() ?? string.Empty,
+                Email = row["email"].ToString() ?? string.Empty,
+                //Password = row["password"].ToString() ?? string.Empty, // Uncomment this line if we need password for GetUsers, uncomment also in StoredProcedure and UserDTO model class
+                RoleId = Convert.ToInt32(row["role_id"]),
+                RoleName = row["role_name"]?.ToString() ?? string.Empty,
+                CommitteeId = row["committee_id"] != DBNull.Value ? Convert.ToInt32(row["committee_id"]) : (int?)null,
+                CommitteeName = row["committee_name"]?.ToString(),
+                DistrictId = row["district_id"] != DBNull.Value ? Convert.ToInt32(row["district_id"]) : (int?)null, // ✅ Fix: Use null instead of 0
+                DistrictName = row["district_name"] != DBNull.Value ? row["district_name"].ToString() : null, // ✅ Fix: Use null instead of ""
+                Region = row["region"] != DBNull.Value ? row["region"].ToString() : null, // ✅ Fix: Use null instead of ""
+                IsActive = Convert.ToBoolean(row["is_active"]),
+                CreatedAt = Convert.ToDateTime(row["created_at"]),
+                UpdatedAt = Convert.ToDateTime(row["updated_at"])
+            };
         }
 
 
         // ✅ Create User (Only Admin can create users)
         public async Task<bool> CreateUserAsync(UserDTO userDto, ClaimsPrincipal user)
         {
+            _logger.LogInformation("User Claims: {Claims}", string.Join(", ", user.Claims.Select(c => $"{c.Type}: {c.Value}")));
+
             if (!IsAdmin(user))
             {
                 _logger.LogWarning("Unauthorized attempt to create user.");
@@ -89,7 +166,7 @@ namespace DPCV_API.BAL.Services.Users
             _dataManager.AddParameter("@p_Email", userDto.Email);
             _dataManager.AddParameter("@p_Password", HashPassword(userDto.Password));
             _dataManager.AddParameter("@p_RoleId", userDto.RoleId);
-            _dataManager.AddParameter("@p_CommitteeId", userDto.CommitteeId);
+            _dataManager.AddParameter("@p_CommitteeId", userDto.CommitteeId ?? (object)DBNull.Value); // ✅ Handle null committee ID
             _dataManager.AddParameter("@p_IsActive", userDto.IsActive);
 
             try
@@ -124,7 +201,7 @@ namespace DPCV_API.BAL.Services.Users
             _dataManager.AddParameter("@p_Name", userDto.Name);
             _dataManager.AddParameter("@p_Email", userDto.Email);
             _dataManager.AddParameter("@p_Password", HashPassword(userDto.Password));
-            _dataManager.AddParameter("@p_CommitteeId", userDto.CommitteeId);
+            _dataManager.AddParameter("@p_CommitteeId", userDto.CommitteeId ?? (object)DBNull.Value); // ✅ Handle null committee ID
             _dataManager.AddParameter("@p_IsActive", userDto.IsActive);
 
             try

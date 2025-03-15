@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DPCV_API.Configuration.DbContext;
+using DPCV_API.Helpers;
+using DPCV_API.Models.CommonModel;
 using DPCV_API.Models.EventModel;
 using Microsoft.Extensions.Logging;
 
@@ -21,17 +24,73 @@ namespace DPCV_API.BAL.Services.Events
             _logger = logger;
         }
 
-        public async Task<IEnumerable<EventDTO>> GetAllEventsAsync()
+        public async Task<PaginatedResponse<EventResponseDTO>> GetPaginatedEventsAsync(int pageNumber, int pageSize)
+        {
+            string procedureName = "GetPaginatedEvents";
+
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<EventResponseDTO> events = new();
+
+            foreach (DataRow row in result.Rows)
+            {
+                events.Add(new EventResponseDTO
+                {
+                    EventId = Convert.ToInt32(row["event_id"]),
+                    EventName = row["event_name"].ToString()!,
+                    Description = row["description"].ToString()!,
+                    StartDate = Convert.ToDateTime(row["start_date"]),
+                    EndDate = Convert.ToDateTime(row["end_date"]),
+                    Location = row["location"].ToString()!,
+                    CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    is_active = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
+                });
+            }
+
+            return new PaginatedResponse<EventResponseDTO>
+            {
+                Data = events,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalEventCountAsync()
+            };
+        }
+
+        // ✅ Get total event count
+        private async Task<int> GetTotalEventCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM events";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
+        }
+
+
+
+        public async Task<IEnumerable<EventResponseDTO>> GetAllEventsAsync()
         {
             string spName = "GetAllEvents";
-            List<EventDTO> events = new();
+            List<EventResponseDTO> events = new();
 
             try
             {
                 DataTable result = await _dataManager.ExecuteQueryAsync(spName, CommandType.StoredProcedure);
                 foreach (DataRow row in result.Rows)
                 {
-                    events.Add(new EventDTO
+                    events.Add(new EventResponseDTO
                     {
                         EventId = Convert.ToInt32(row["event_id"]),
                         EventName = row["event_name"].ToString()!,
@@ -40,10 +99,14 @@ namespace DPCV_API.BAL.Services.Events
                         EndDate = Convert.ToDateTime(row["end_date"]),
                         Location = row["location"].ToString()!,
                         CommitteeId = Convert.ToInt32(row["committee_id"]),
-                        Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                        Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                         IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                         VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                        is_active = Convert.ToInt32(row["is_active"])
+                        is_active = Convert.ToInt32(row["is_active"]),
+                        DistrictId = Convert.ToInt32(row["district_id"]),
+                        DistrictName = row["district_name"].ToString()!,
+                        Region = row["region"].ToString()!,
+                        StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
                     });
                 }
             }
@@ -55,7 +118,7 @@ namespace DPCV_API.BAL.Services.Events
             return events;
         }
 
-        public async Task<EventDTO?> GetEventByIdAsync(int eventId)
+        public async Task<EventResponseDTO?> GetEventByIdAsync(int eventId)
         {
             string spName = "GetEventById";
             _dataManager.ClearParameters();
@@ -67,7 +130,7 @@ namespace DPCV_API.BAL.Services.Events
                 if (result.Rows.Count == 0) return null;
 
                 DataRow row = result.Rows[0];
-                return new EventDTO
+                return new EventResponseDTO
                 {
                     EventId = Convert.ToInt32(row["event_id"]),
                     EventName = row["event_name"].ToString()!,
@@ -76,10 +139,14 @@ namespace DPCV_API.BAL.Services.Events
                     EndDate = Convert.ToDateTime(row["end_date"]),
                     Location = row["location"].ToString()!,
                     CommitteeId = Convert.ToInt32(row["committee_id"]),
-                    Tags = row["tags"] != DBNull.Value ? JsonDocument.Parse(row["tags"].ToString()!) : null,
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
                     IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
                     VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
-                    is_active = Convert.ToInt32(row["is_active"])
+                    is_active = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
                 };
             }
             catch (Exception ex)
@@ -111,7 +178,7 @@ namespace DPCV_API.BAL.Services.Events
             _dataManager.AddParameter("@p_end_date", eventDto.EndDate);
             _dataManager.AddParameter("@p_location", eventDto.Location);
             _dataManager.AddParameter("@p_committee_id", eventDto.CommitteeId);
-            _dataManager.AddParameter("@p_tags", eventDto.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+            _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(eventDto.Tags));
             _dataManager.AddParameter("@p_isVerifiable", eventDto.IsVerifiable);
             _dataManager.AddParameter("@p_verification_status_id", roleId == 1 ? 2 : 1);
             _dataManager.AddParameter("@p_is_active", eventDto.is_active);
@@ -155,7 +222,7 @@ namespace DPCV_API.BAL.Services.Events
             _dataManager.AddParameter("@p_end_date", eventDto.EndDate);
             _dataManager.AddParameter("@p_location", eventDto.Location);
             _dataManager.AddParameter("@p_committee_id", eventDto.CommitteeId);
-            _dataManager.AddParameter("@p_tags", eventDto.Tags?.RootElement.ToString() ?? (object)DBNull.Value);
+            _dataManager.AddParameter("@p_tags", JsonSerializer.Serialize(eventDto.Tags));
             _dataManager.AddParameter("@p_isVerifiable", eventDto.IsVerifiable);
             _dataManager.AddParameter("@p_verification_status_id", roleId == 1 ? 2 : 1);
             _dataManager.AddParameter("@p_is_active", eventDto.is_active);

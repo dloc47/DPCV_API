@@ -1,5 +1,6 @@
 ﻿using DPCV_API.Configuration.DbContext;
 using DPCV_API.Helpers;
+using DPCV_API.Models.CommonModel;
 using DPCV_API.Models.ProductModel;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,6 +22,68 @@ namespace DPCV_API.BAL.Services.Products
             _dataManager = dataManager;
             _logger = logger;
         }
+
+        // ✅ Get Paginated Products
+        public async Task<PaginatedResponse<ProductResponseDTO>> GetPaginatedProductsAsync(int pageNumber, int pageSize)
+        {
+            string procedureName = "GetPaginatedProducts";
+
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<ProductResponseDTO> products = new();
+
+            foreach (DataRow row in result.Rows)
+            {
+                products.Add(new ProductResponseDTO
+                {
+                    ProductId = Convert.ToInt32(row["product_id"]),
+                    ProductName = row["product_name"].ToString()!,
+                    Description = row["description"]?.ToString(),
+                    MetricUnit = row["metric_unit"].ToString()!,
+                    MetricValue = row["metric_value"] != DBNull.Value ? Convert.ToDecimal(row["metric_value"]) : null,
+                    Price = Convert.ToDecimal(row["price"]),
+
+                    CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    CommitteeName = row["committee_name"].ToString()!,
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+
+                    HomestayId = row["homestay_id"] != DBNull.Value ? Convert.ToInt32(row["homestay_id"]) : null,
+                    HomestayName = row["homestay_id"] == DBNull.Value ? null : row["homestay_name"]?.ToString(),
+
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    StatusType = row["status_type"]?.ToString(),
+                    IsActive = Convert.ToBoolean(row["is_active"])
+                });
+            }
+
+            return new PaginatedResponse<ProductResponseDTO>
+            {
+                Data = products,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalProductCountAsync()
+            };
+        }
+
+        // ✅ Get total product count
+        private async Task<int> GetTotalProductCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM products";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
+        }
+
 
         // ✅ Get All Products
         public async Task<List<ProductResponseDTO>> GetAllProductsAsync()

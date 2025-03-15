@@ -4,6 +4,7 @@ using System.Data;
 using System.Text.Json;
 using DPCV_API.Models.HomestayModel;
 using DPCV_API.Helpers;
+using DPCV_API.Models.CommonModel;
 
 namespace DPCV_API.BAL.Services.Homestays
 {
@@ -17,6 +18,67 @@ namespace DPCV_API.BAL.Services.Homestays
             _dataManager = dataManager;
             _logger = logger;
         }
+
+
+        public async Task<PaginatedResponse<HomestayResponseDTO>> GetPaginatedHomestaysAsync(int pageNumber, int pageSize)
+        {
+            string procedureName = "GetPaginatedHomestays";
+
+            var parameters = new Dictionary<string, object>
+    {
+        { "PageNumber", pageNumber },
+        { "PageSize", pageSize }
+    };
+
+            DataTable result = await _dataManager.ExecuteQueryAsync(procedureName, CommandType.StoredProcedure, parameters);
+            List<HomestayResponseDTO> homestays = new();
+
+            foreach (DataRow row in result.Rows)
+            {
+                homestays.Add(new HomestayResponseDTO
+                {
+                    HomestayId = Convert.ToInt32(row["homestay_id"]),
+                    HomestayName = row["homestay_name"].ToString()!,
+                    CommitteeId = Convert.ToInt32(row["committee_id"]),
+                    Address = row["address"].ToString()!,
+                    Description = row["description"] != DBNull.Value ? row["description"].ToString()! : string.Empty,
+                    OwnerName = row["owner_name"].ToString()!,
+                    OwnerMobile = row["owner_mobile"].ToString()!,
+                    TotalRooms = Convert.ToInt32(row["total_rooms"]),
+                    RoomTariff = Convert.ToDecimal(row["room_tariff"]),
+                    Tags = JsonHelper.DeserializeJsonSafely<List<string>>(row["tags"], "tags"),
+                    Amenities = JsonHelper.DeserializeJsonSafely<List<string>>(row["amenities"], "amenities"),
+                    PaymentMethods = row["payment_methods"] != DBNull.Value ? row["payment_methods"].ToString()! : string.Empty,
+                    SocialMediaLinks = JsonHelper.DeserializeJsonSafely<Dictionary<string, string>>(row["social_media_links"], "social_media_links"),
+                    IsVerifiable = Convert.ToBoolean(row["isVerifiable"]),
+                    VerificationStatusId = row["verification_status_id"] != DBNull.Value ? Convert.ToInt32(row["verification_status_id"]) : null,
+                    IsActive = Convert.ToInt32(row["is_active"]),
+                    DistrictId = Convert.ToInt32(row["district_id"]),
+                    DistrictName = row["district_name"].ToString()!,
+                    Region = row["region"].ToString()!,
+                    StatusType = row["status_type"] != DBNull.Value ? row["status_type"].ToString()! : null
+                });
+            }
+
+            return new PaginatedResponse<HomestayResponseDTO>
+            {
+                Data = homestays,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = await GetTotalHomestayCountAsync()
+            };
+        }
+
+        // ✅ Get total homestay count
+        private async Task<int> GetTotalHomestayCountAsync()
+        {
+            string query = "SELECT COUNT(*) FROM homestays";
+
+            object? result = await _dataManager.ExecuteScalarAsync<object>(query, CommandType.Text);
+
+            return result != null ? Convert.ToInt32(result) : 0;
+        }
+
 
         public async Task<List<HomestayResponseDTO>> GetAllHomestaysAsync()
         {

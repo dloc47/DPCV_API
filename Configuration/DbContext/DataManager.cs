@@ -77,6 +77,57 @@ namespace DPCV_API.Configuration.DbContext
         }
 
         /// <summary>
+        /// Executes a SQL query and returns the result as a DataTable.
+        /// Use this when you need to retrieve multiple rows and columns from the database.
+        /// This version allows passing parameters to the query.
+        /// </summary>
+        /// <param name="query">The SQL query or stored procedure name.</param>
+        /// <param name="commandType">The type of the SQL command (Text or StoredProcedure).</param>
+        /// <param name="parameters">A dictionary of SQL parameters and their values.</param>
+        /// <returns>A DataTable containing the result set of the query.</returns>
+        /// <exception cref="Exception">Throws an exception if the query execution fails.</exception>
+        public async Task<DataTable> ExecuteQueryAsync(string query, CommandType commandType, Dictionary<string, object> parameters)
+        {
+            DataTable dataTable = new DataTable();
+            try
+            {
+                // Ensure the database connection is open
+                if (_dbContext.GetCommand().Connection.State != ConnectionState.Open)
+                    _dbContext.OpenContext();
+
+                using (var command = _dbContext.GetCommand())
+                {
+                    command.CommandText = query;
+                    command.CommandType = commandType;
+
+                    // Add parameters if provided
+                    if (parameters != null)
+                    {
+                        foreach (var param in parameters)
+                        {
+                            var dbParameter = command.CreateParameter();
+                            dbParameter.ParameterName = param.Key;
+                            dbParameter.Value = param.Value ?? DBNull.Value;
+                            command.Parameters.Add(dbParameter);
+                        }
+                    }
+
+                    // Execute the query and fill the DataTable
+                    using (var adapter = new MySqlDataAdapter(command))
+                    {
+                        await Task.Run(() => adapter.Fill(dataTable));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Database query failed: {ex.Message}");
+            }
+            return dataTable;
+        }
+
+
+        /// <summary>
         /// Executes a SQL command (INSERT, UPDATE, DELETE) and returns true if successful.
         /// Use this when modifying data in the database without expecting a result set.
         /// </summary>

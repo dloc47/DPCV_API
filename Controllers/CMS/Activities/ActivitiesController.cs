@@ -18,8 +18,27 @@ namespace DPCV_API.Controllers.Website
             _logger = logger;
         }
 
+        // ✅ Get Paginated Activities
+        [HttpGet("paginated-activities")]
+        public async Task<IActionResult> GetPaginatedActivities([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                    return BadRequest(new { message = "Page number and page size must be greater than zero." });
+
+                var activities = await _activityService.GetPaginatedActivitiesAsync(pageNumber, pageSize);
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching paginated activities.");
+                return StatusCode(500, new { message = "An error occurred while fetching activities." });
+            }
+        }
+
         // ✅ Get All Activities
-        [HttpGet]
+        [HttpGet("all-activities")]
         public async Task<IActionResult> GetAllActivities()
         {
             var activities = await _activityService.GetAllActivitiesAsync();

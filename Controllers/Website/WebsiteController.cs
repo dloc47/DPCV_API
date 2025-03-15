@@ -108,6 +108,28 @@ public class WebsiteController : ControllerBase
         }
     }
 
+    // ✅ Get Paginated Committees
+    [HttpGet("paginated-committees")]
+    public async Task<IActionResult> GetPaginatedCommittees([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (pageNumber < 1 || pageSize < 1)
+            {
+                return BadRequest(new { message = "Invalid pagination parameters." });
+            }
+
+            var result = await _committeeService.GetPaginatedCommitteesAsync(pageNumber, pageSize);
+
+            return result.Data.Any() ? Ok(result) : NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching paginated committees.");
+            return StatusCode(500, new { message = "An error occurred while fetching committee data." });
+        }
+    }
+
     // ✅ Get All Committees
     [HttpGet("committees")]
     public async Task<IActionResult> GetAllCommittees()
@@ -137,6 +159,28 @@ public class WebsiteController : ControllerBase
         {
             _logger.LogError(ex, $"Error fetching committee with ID {id}");
             return StatusCode(500, new { message = "An error occurred while fetching the committee." });
+        }
+    }
+
+    // ✅ Get Paginated Homestays
+    [HttpGet("paginated-homestays")]
+    public async Task<IActionResult> GetPaginatedHomestays([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (pageNumber < 1 || pageSize < 1)
+            {
+                return BadRequest(new { message = "Invalid pagination parameters." });
+            }
+
+            var result = await _homestayService.GetPaginatedHomestaysAsync(pageNumber, pageSize);
+
+            return result.Data.Any() ? Ok(result) : NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching paginated homestays.");
+            return StatusCode(500, new { message = "An error occurred while fetching homestay data." });
         }
     }
 
@@ -173,6 +217,28 @@ public class WebsiteController : ControllerBase
         }
     }
 
+    // ✅ Get Paginated Products
+    [HttpGet("paginated-products")]
+    public async Task<IActionResult> GetPaginatedProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (pageNumber < 1 || pageSize < 1)
+            {
+                return BadRequest(new { message = "Invalid pagination parameters." });
+            }
+
+            var result = await _productService.GetPaginatedProductsAsync(pageNumber, pageSize);
+
+            return result.Data.Any() ? Ok(result) : NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching paginated products.");
+            return StatusCode(500, new { message = "An error occurred while fetching product data." });
+        }
+    }
+
     // ✅ Get All Products
     [HttpGet("products")]
     public async Task<IActionResult> GetAllProducts()
@@ -205,8 +271,27 @@ public class WebsiteController : ControllerBase
         }
     }
 
+    // ✅ Get Paginated Activities
+    [HttpGet("paginated-activities")]
+    public async Task<IActionResult> GetPaginatedActivities([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (pageNumber < 1 || pageSize < 1)
+                return BadRequest(new { message = "Page number and page size must be greater than zero." });
+
+            var activities = await _activityService.GetPaginatedActivitiesAsync(pageNumber, pageSize);
+            return Ok(activities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching paginated activities.");
+            return StatusCode(500, new { message = "An error occurred while fetching activities." });
+        }
+    }
+
     // ✅ Get All Activities
-    [HttpGet("activities")]
+    [HttpGet("all-activities")]
     public async Task<IActionResult> GetAllActivities()
     {
         try
@@ -236,6 +321,29 @@ public class WebsiteController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while fetching the activity." });
         }
     }
+
+    // ✅ Get Paginated Events
+    [HttpGet("paginated-events")]
+    public async Task<IActionResult> GetPaginatedEvents([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (pageNumber < 1 || pageSize < 1)
+            {
+                return BadRequest(new { message = "Invalid pagination parameters." });
+            }
+
+            var result = await _eventService.GetPaginatedEventsAsync(pageNumber, pageSize);
+
+            return result.Data.Any() ? Ok(result) : NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching paginated events.");
+            return StatusCode(500, new { message = "An error occurred while fetching event data." });
+        }
+    }
+
 
     // ✅ Get All Events
     [HttpGet("events")]

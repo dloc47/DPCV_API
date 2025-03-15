@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using DPCV_API.BAL.Services.Events;
 using DPCV_API.Models.EventModel;
 
@@ -12,10 +10,34 @@ namespace DPCV_API.Controllers.Website
     public class EventController : ControllerBase
     {
         private readonly IEventService _eventService;
+        private readonly ILogger<EventController> _logger;
 
-        public EventController(IEventService eventService)
+        public EventController(IEventService eventService, ILogger<EventController> logger)
         {
             _eventService = eventService;
+            _logger = logger;
+        }
+
+        // ✅ Get Paginated Events
+        [HttpGet("paginated-events")]
+        public async Task<IActionResult> GetPaginatedEvents([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1)
+                {
+                    return BadRequest(new { message = "Invalid pagination parameters." });
+                }
+
+                var result = await _eventService.GetPaginatedEventsAsync(pageNumber, pageSize);
+
+                return result.Data.Any() ? Ok(result) : NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching paginated events.");
+                return StatusCode(500, new { message = "An error occurred while fetching event data." });
+            }
         }
 
         [HttpGet]
