@@ -142,7 +142,7 @@ CREATE TABLE `events` (
   KEY `committee_id` (`committee_id`),
   KEY `verification_status_id` (`verification_status_id`),
   CONSTRAINT `events_ibfk_1` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -368,7 +368,6 @@ CREATE TABLE `users` (
   `email` varchar(191) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role_id` int NOT NULL,
-  `district_id` int DEFAULT NULL,
   `committee_id` int DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -376,11 +375,9 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `email` (`email`),
   KEY `role_id` (`role_id`),
-  KEY `district_id` (`district_id`),
   KEY `fk_users_committees` (`committee_id`),
   CONSTRAINT `fk_users_committees` FOREIGN KEY (`committee_id`) REFERENCES `committees` (`committee_id`) ON DELETE SET NULL,
-  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `user_roles` (`role_id`) ON DELETE CASCADE,
-  CONSTRAINT `users_ibfk_2` FOREIGN KEY (`district_id`) REFERENCES `districts` (`district_id`) ON DELETE SET NULL
+  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `user_roles` (`role_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -390,7 +387,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Admin','admin@example.com','admin123',1,2,NULL,1,'2025-02-18 15:48:06','2025-02-19 15:18:02'),(2,'Gangtok Committee','gangtokcommittee@example.com','committee123',2,NULL,NULL,1,'2025-02-18 15:48:06','2025-02-19 15:18:02'),(3,'Trial Admin','try@admin.com','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',1,NULL,NULL,1,'2025-02-19 12:25:04','2025-02-19 15:18:02');
+INSERT INTO `users` VALUES (1,'Admin','admin@example.com','admin123',1,NULL,1,'2025-02-18 15:48:06','2025-02-19 15:18:02'),(2,'Gangtok Committee','gangtokcommittee@example.com','committee123',2,1,1,'2025-02-18 15:48:06','2025-03-15 14:40:33'),(3,'Trial Admin','try@admin.com','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',1,NULL,1,'2025-02-19 12:25:04','2025-02-19 15:18:02');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -693,12 +690,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CreateUser`(
     IN p_Email VARCHAR(255),
     IN p_Password VARCHAR(255),
     IN p_RoleId INT,
-    IN p_CommitteeId INT,
+    IN p_CommitteeId INT, -- Keep INT but handle NULL
     IN p_IsActive BOOLEAN
 )
 BEGIN
     INSERT INTO Users (name, email, password, role_id, committee_id, is_active)
-    VALUES (p_Name, p_Email, p_Password, p_RoleId, p_CommitteeId, p_IsActive);
+    VALUES (
+        p_Name, 
+        p_Email, 
+        p_Password, 
+        p_RoleId, 
+        IFNULL(p_CommitteeId, NULL), -- ✅ Handle NULL committee ID
+        p_IsActive
+    );
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1085,7 +1089,26 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllEvents`()
 BEGIN
-    SELECT * FROM events;
+    SELECT 
+        e.event_id, 
+        e.event_name, 
+        e.description, 
+        e.start_date, 
+        e.end_date, 
+        e.location, 
+        e.committee_id, 
+        e.tags, 
+        e.isVerifiable, 
+        e.verification_status_id, 
+        e.is_active,
+        c.district_id, 
+        d.district_name, 
+        d.region,
+        mvs.status_type
+    FROM events e
+    JOIN committees c ON e.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON e.verification_status_id = mvs.verification_status_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1201,7 +1224,25 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAllUsers`()
 BEGIN
-    SELECT * FROM Users;
+    SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        -- u.password, -- ✅ Uncomment this line if we need password for GetUsers and change class in UserDTO model class and service class
+        u.role_id,
+        r.role_name,
+        u.committee_id,
+        c.committee_name,
+        c.district_id,  -- ✅ Fetch district_id from committees
+        d.district_name, -- ✅ Fetch district_name from districts
+        d.region,
+        u.is_active,
+        u.created_at,
+        u.updated_at
+    FROM users u
+    LEFT JOIN user_roles r ON u.role_id = r.role_id
+    LEFT JOIN committees c ON u.committee_id = c.committee_id
+    LEFT JOIN districts d ON c.district_id = d.district_id; -- ✅ Join districts using committee's district_id
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1375,7 +1416,27 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetEventById`(IN p_event_id INT)
 BEGIN
-    SELECT * FROM events WHERE event_id = p_event_id;
+    SELECT 
+        e.event_id, 
+        e.event_name, 
+        e.description, 
+        e.start_date, 
+        e.end_date, 
+        e.location, 
+        e.committee_id, 
+        e.tags, 
+        e.isVerifiable, 
+        e.verification_status_id, 
+        e.is_active,
+        c.district_id, 
+        d.district_name, 
+        d.region,
+        mvs.status_type
+    FROM events e
+    JOIN committees c ON e.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON e.verification_status_id = mvs.verification_status_id
+    WHERE e.event_id = p_event_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -1501,6 +1562,296 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedActivities` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedActivities`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        a.activity_id, 
+        a.activity_name, 
+        a.description,
+        a.tags,
+        a.committee_id,
+        c.district_id, 
+        d.district_name,  
+        d.region,  
+        a.homestay_id,
+        a.isVerifiable,
+        a.verification_status_id,
+        mvs.status_type,  
+        a.is_active
+    FROM activities a
+    JOIN committees c ON a.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON a.verification_status_id = mvs.verification_status_id
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedCommittees` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedCommittees`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        c.committee_id,
+        c.committee_name,
+        c.description,
+        c.district_id,
+        c.contact_number,
+        c.email,
+        c.address,
+        c.tags,
+        c.tourist_attractions,
+        c.latitude,
+        c.longitude,
+        c.leadership,
+        c.isVerifiable,
+        c.verification_status_id,
+        mvs.status_type AS verification_status,
+        c.is_active,
+        d.district_name
+    FROM committees c
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON c.verification_status_id = mvs.verification_status_id
+    ORDER BY c.committee_id DESC
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedEvents`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        e.event_id, 
+        e.event_name, 
+        e.description, 
+        e.start_date, 
+        e.end_date, 
+        e.location, 
+        e.committee_id, 
+        e.tags, 
+        e.isVerifiable, 
+        e.verification_status_id, 
+        e.is_active,
+        c.district_id, 
+        d.district_name, 
+        d.region,
+        mvs.status_type
+    FROM events e
+    JOIN committees c ON e.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status mvs ON e.verification_status_id = mvs.verification_status_id
+    ORDER BY e.start_date DESC
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedHomestays` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedHomestays`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        h.homestay_id,
+        h.homestay_name,
+        h.committee_id,
+        c.district_id,
+        d.district_name,
+        d.region,
+        h.address,
+        h.description,
+        h.owner_name,
+        h.owner_mobile,
+        h.total_rooms,
+        h.room_tariff,
+        h.tags,
+        h.amenities,
+        h.payment_methods,
+        h.social_media_links,
+        h.isVerifiable,
+        h.verification_status_id,
+        v.status_type,
+        h.is_active
+    FROM homestays h
+    JOIN committees c ON h.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN master_verification_status v ON h.verification_status_id = v.verification_status_id
+    ORDER BY h.homestay_name ASC
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedProducts` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedProducts`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        -- Product Details
+        p.product_id, 
+        p.product_name, 
+        p.description, 
+        p.metric_unit,
+        p.metric_value,
+        p.price, 
+        
+        -- Committee & District Details
+        p.committee_id, 
+        c.committee_name, 
+        c.district_id, 
+        d.district_name, 
+        d.region, 
+        
+        -- Homestay Details (if applicable)
+        p.homestay_id, 
+        IFNULL(h.homestay_name, NULL) AS homestay_name,  
+        
+        -- Verification & Status
+        p.tags, 
+        p.isVerifiable, 
+        p.verification_status_id, 
+        v.status_type,  
+        p.is_active
+        
+    FROM products p
+    JOIN committees c ON p.committee_id = c.committee_id
+    JOIN districts d ON c.district_id = d.district_id
+    LEFT JOIN homestays h ON p.homestay_id = h.homestay_id
+    LEFT JOIN master_verification_status v ON p.verification_status_id = v.verification_status_id
+    ORDER BY p.product_name ASC
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GetPaginatedUsers` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaginatedUsers`(
+    IN PageNumber INT,
+    IN PageSize INT
+)
+BEGIN
+    DECLARE OffsetValue INT;
+    SET OffsetValue = (PageNumber - 1) * PageSize;
+
+    SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        -- u.password,
+        u.role_id,
+        r.role_name,
+        u.committee_id,
+        c.committee_name,
+        c.district_id,  
+        d.district_name, 
+        d.region,
+        u.is_active,
+        u.created_at,
+        u.updated_at
+    FROM users u
+    LEFT JOIN user_roles r ON u.role_id = r.role_id
+    LEFT JOIN committees c ON u.committee_id = c.committee_id
+    LEFT JOIN districts d ON c.district_id = d.district_id
+    ORDER BY u.created_at DESC
+    LIMIT PageSize OFFSET OffsetValue;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!50003 DROP PROCEDURE IF EXISTS `GetProductById` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -1610,23 +1961,28 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserByEmail`(
     IN p_email VARCHAR(191)
-    
-    -- try@admin.com - admin123
 )
 BEGIN
+    -- try@admin.com - admin123
     SELECT 
         u.user_id AS UserId,
         u.name AS Name,
         u.email AS Email,
-        u.password AS Password,
+        u.password AS Password, -- Needed for authentication but NOT in response DTO
         u.role_id AS RoleId,
-        r.role_name AS RoleName,  -- If we need role name
-        u.district_id AS DistrictId,
+        r.role_name AS RoleName,
+        u.committee_id AS CommitteeId,
+        c.committee_name AS CommitteeName,
+        d.district_id AS DistrictId,
+        d.district_name AS DistrictName,
+        d.region AS Region,
         u.is_active AS IsActive,
         u.created_at AS CreatedAt,
         u.updated_at AS UpdatedAt
     FROM users u
     LEFT JOIN user_roles r ON u.role_id = r.role_id
+    LEFT JOIN committees c ON u.committee_id = c.committee_id
+    LEFT JOIN districts d ON c.district_id = d.district_id
     WHERE u.email = p_email
     LIMIT 1;
 END ;;
@@ -1647,7 +2003,26 @@ DELIMITER ;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserById`(IN p_UserId INT)
 BEGIN
-    SELECT * FROM Users WHERE user_id = p_UserId;
+    SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        -- u.password, -- ✅ Uncomment this line if we need password for GetUsers and change class in UserDTO model class and service class
+        u.role_id,
+        r.role_name,
+        u.committee_id,
+        c.committee_name,
+        c.district_id,  -- ✅ Fetch district_id from committees
+        d.district_name, -- ✅ Fetch district_name from districts
+        d.region,
+        u.is_active,
+        u.created_at,
+        u.updated_at
+    FROM users u
+    LEFT JOIN user_roles r ON u.role_id = r.role_id
+    LEFT JOIN committees c ON u.committee_id = c.committee_id
+    LEFT JOIN districts d ON c.district_id = d.district_id -- ✅ Join districts using committee's district_id
+    WHERE u.user_id = p_UserId;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -2365,13 +2740,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateUser`(
     IN p_Name VARCHAR(255),
     IN p_Email VARCHAR(255),
     IN p_Password VARCHAR(255),
-    IN p_CommitteeId INT,
+    IN p_CommitteeId INT, -- Keep INT but handle NULL
     IN p_IsActive BOOLEAN
 )
 BEGIN
     UPDATE Users 
-    SET name = p_Name, email = p_Email, password = p_Password, 
-        committee_id = p_CommitteeId, is_active = p_IsActive
+    SET 
+        name = p_Name, 
+        email = p_Email, 
+        password = p_Password, 
+        committee_id = IFNULL(p_CommitteeId, NULL), -- ✅ Handle NULL committee ID
+        is_active = p_IsActive
     WHERE user_id = p_UserId;
 END ;;
 DELIMITER ;
@@ -2416,4 +2795,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-03-15 10:16:21
+-- Dump completed on 2025-03-15 16:44:32
